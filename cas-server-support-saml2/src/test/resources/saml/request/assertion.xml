@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+	ID="_76e026126bc35c0f825eced51d6bd43b" IssueInstant="2009-08-13T19:54:55.562Z"
+	Version="2.0">
+	<saml:Issuer>http://saml.r.us/AssertingParty</saml:Issuer>
+	<saml:Subject>
+		<saml:NameID>harold_dt</saml:NameID>
+		<saml:SubjectConfirmation
+			Method="urn:oasis:names:tc:SAML:2.0:cm:sender-vouches" />
+	</saml:Subject>
+	<saml:Conditions NotBefore="2009-08-13T19:54:45.562Z"
+		NotOnOrAfter="2009-08-13T20:24:55.562Z" />
+	<saml:AuthnStatement>
+		<saml:AuthnContext>
+			<saml:AuthnContextClassRef>
+				urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport
+			</saml:AuthnContextClassRef>
+		</saml:AuthnContext>
+	</saml:AuthnStatement>
+</saml:Assertion>
