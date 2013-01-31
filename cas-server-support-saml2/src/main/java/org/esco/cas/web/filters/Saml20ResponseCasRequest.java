@@ -64,7 +64,7 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 				this.parameters.putAll(initialParams);
 			}
 
-			String idpIdParamKey = SamlHelper.getWayfConfig().getIdpIdParamKey();
+			final String idpIdParamKey = SamlHelper.getWayfConfig().getIdpIdParamKey();
 			this.parameters.remove(idpIdParamKey);
 			this.parameters.remove(SamlHelper.SAML_RESPONSE_PARAM_KEY);
 			// Lock the map.

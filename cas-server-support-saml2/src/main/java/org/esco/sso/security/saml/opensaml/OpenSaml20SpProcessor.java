@@ -805,7 +805,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	}
 
 	/**
-	 * Retrieve all assertions, normal ones and encrypted ones if a private kay
+	 * Retrieve all assertions, normal ones and encrypted ones if a private key
 	 * was provided.
 	 * 
 	 * @param samlResponse
