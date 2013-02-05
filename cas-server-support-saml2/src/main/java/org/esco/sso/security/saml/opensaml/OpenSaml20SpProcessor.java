@@ -178,6 +178,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			if (Response.class.isAssignableFrom(samlObject.getClass())) {
 				// Process Authn Response
 				response = this.processSaml20AuthnResponse((Response)samlObject, binding, idpConnector);
+				this.storeSamlResponseDataInCache(response);
 			} else {
 				throw new SamlProcessingException(String.format("Unsupported SAML query type: [%s] !",
 						samlObject.getClass().getName()));
@@ -218,7 +219,13 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			// Process the SAML Object
 			if (LogoutRequest.class.isAssignableFrom(samlObject.getClass())) {
 				// Process SLO Request
-				response = this.processSaml20SingleLogoutRequest((LogoutRequest)samlObject, binding, idpConnector);
+				final SamlRequestData sloResponseRequest =
+						this.processSaml20SingleLogoutRequest((LogoutRequest)samlObject,
+								binding, idpConnector);
+				// Send SLO Response
+				this.sendSloResponse(binding, sloResponseRequest);
+				// TODO MBD: the method should probably not return a SamlResponseData !
+				response = new SamlResponseData();
 			} else if (LogoutResponse.class.isAssignableFrom(samlObject.getClass())) {
 				//Process SLO Response
 				response = this.processSaml20SingleLogoutResponse((LogoutResponse)samlObject, binding, idpConnector);
@@ -311,7 +318,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	@Override
 	public Signature signSamlObject(final SignableSAMLObject signable) {
-		Signature newSignature = this.buildSignature();
+		Signature newSignature = this.buildSignature(true);
 
 		signable.setSignature(newSignature);
 		return newSignature;
@@ -341,14 +348,20 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		for (ISaml20IdpConnector idpConnector: this.idpConnectors) {
 			try {
 				idpConnector.registerSaml20SpProcessor(this);
-				this.idpConnectorsByEntityId.put(idpConnector.getIdpConfig().getIdpEntityId(), idpConnector);
+				final IIdpConfig idpConfig = idpConnector.getIdpConfig();
+				if (idpConfig != null) {
+					this.idpConnectorsByEntityId.put(idpConfig.getIdpEntityId(), idpConnector);
+				} else {
+					this.logger.warn("No IdP config found while registering an IdPConnector in SPProcessor with id: [{}] !",
+							this.getSpConfig().getId());
+				}
 			} catch (IllegalAccessError e) {
 				// Catch exception thrown by fake IdPs like CAS Fake IdP.
 			}
 		}
 
 		this.spSigningCredential = SecurityHelper.getSimpleCredential(
-				this.getSpConfig().getSigningCredential().getPublicKey(),
+				this.getSpConfig().getSigningCredential().getEntityCertificate(),
 				this.getSpConfig().getSigningKey());
 		Assert.notNull(this.spSigningCredential, "Unable to build SP signing credentials (signing public + private keys) !");
 
@@ -507,8 +520,6 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		samlResponseData.setId(authnResponse.getID());
 		samlResponseData.setInResponseToId(authnResponse.getInResponseTo());
 
-		this.storeSamlResponseDataInCache(samlResponseData);
-
 		this.logger.debug("SAML 2.0 Authn Response processing ended.");
 		return samlResponseData;
 	}
@@ -521,7 +532,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * @return the SLO Response to return to the IdP
 	 * @throws SamlProcessingException
 	 */
-	protected SamlResponseData processSaml20SingleLogoutRequest(final LogoutRequest logoutRequest,
+	protected SamlRequestData processSaml20SingleLogoutRequest(final LogoutRequest logoutRequest,
 			final SamlBindingEnum binding, final ISaml20IdpConnector idpConnector) throws SamlProcessingException {
 		Assert.notNull(logoutRequest, "SLO Request must be supplied !");
 		this.logger.debug("Processing a SAML 2.0 Single Logout Request...");
@@ -533,10 +544,8 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		SamlRequestData sloResponseRequest = idpConnector.buildSaml20SingleLogoutResponse(
 				binding, originRequestId);
 
-		this.sendSloResponse(binding, sloResponseRequest);
-
 		this.logger.debug("SAML 2.0 Logout Response processing ended.");
-		return null;
+		return sloResponseRequest;
 	}
 
 	/**
@@ -1136,15 +1145,18 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * 
 	 * @return the SAML2 signature.
 	 */
-	protected Signature buildSignature() {
+	protected Signature buildSignature(final boolean withoutKeyInfo) {
 		Signature signature = this.signatureBuilder.buildObject();
 
 		try {
-			SecurityHelper.prepareSignatureParams(signature, this.spSigningCredential, Configuration.getGlobalSecurityConfiguration(), null);
+			SecurityHelper.prepareSignatureParams(signature, this.spSigningCredential,
+					Configuration.getGlobalSecurityConfiguration(), null);
 			signature.setSigningCredential(this.spSigningCredential);
 
 			// FIX MBD: Remove key info which is optional to save request length
-			signature.setKeyInfo(null);
+			if (withoutKeyInfo) {
+				signature.setKeyInfo(null);
+			}
 
 		} catch (SecurityException e) {
 			this.logger.error("Error while building signature !", e);
