@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<saml2p:AuthnRequest xmlns:saml2p="urn:oasis:names:tc:SAML:2.0:protocol"
+	AssertionConsumerServiceURL="https://demo-ent.giprecia.org/cas/saml2"
+	ForceAuthn="true"
+	ID="_cf5ca678be3ab8cfe772bb0cdacc76b8555a23b3f7de1c339eda8e28289eaac722899d09e724ca0a53cf"
+	IsPassive="false" IssueInstant="2012-04-26T12:36:33.691Z"
+	ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+	ProviderName="https://demo-ent.giprecia.org/cas" Version="2.0">
+	<saml2:Issuer xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion">https://demo-ent.giprecia.org/cas
+	</saml2:Issuer>
+	<saml2p:NameIDPolicy AllowCreate="false"
+		SPNameQualifier="https://demo-ent.giprecia.org/cas" />
+	<saml2p:RequestedAuthnContext Comparison="exact">
+		<saml2:AuthnContextClassRef xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion">urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport
+		</saml2:AuthnContextClassRef>
+	</saml2p:RequestedAuthnContext>
+</saml2p:AuthnRequest>

@@ -16,6 +16,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
+ * Test du SP Processor.
+ * 
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */

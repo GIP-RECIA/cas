@@ -1,34 +1,120 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns:p="http://www.springframework.org/schema/p"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd">
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:mockito="http://www.mockito.org/spring/mockito"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
+		http://www.mockito.org/spring/mockito classpath:spring/mockito.xsd">
     <description>
     	Configuration for the OpenSaml SAML 2.0 Processos.
     </description>
+	
+	<!-- Service Provider config -->
+	<bean id="spConfig" class="org.esco.sso.security.impl.CasSpConfig">
+		<property name="id" value="testSpConfig" />
+		<property name="entityId" value="http://www.recia.fr/cas/Shibboleth.sso" />
+		<property name="spMetadata" ref="spMetadata" />
+		<property name="description" value="Service Provider inside CAS." />
 
-	<bean id="openSaml20Connector" class="org.esco.sso.security.saml.opensaml.OpenSaml20IdpConnector">
-		<property name="samlMessageDecoder" ref="samlMessageDecoder" />
-		<property name="clockSkewSeconds" value="60" />
-		<property name="serviceProviderName" value="https://demo-ent.giprecia.org/cas" />
-		<property name="serviceProviderUrl" value="https://demo-ent.giprecia.org/cas/saml2" />
-	</bean>
+		<property name="decryptionKeyResource" ref="spKey" />
+		<property name="decryptionKeySpec" value="java.security.spec.PKCS8EncodedKeySpec" />
+		<property name="decryptionKeyType" value="RSA" />
 
-	<bean id="samlMessageDecoder" class="org.opensaml.saml2.binding.decoding.HTTPPostDecoder">
-
-	</bean>
-
-
-	<bean id="saml20AuthnRequest" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/request/authnRequest.xml" />
+		<property name="signingKeyResource" ref="spKey" />
+		<property name="signingKeySpec" value="java.security.spec.PKCS8EncodedKeySpec" />
+		<property name="signingKeyType" value="RSA" />
 	</bean>
 	
-	<bean id="saml20Response" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/request/response.xml" />
+	<bean id="spProcessor"
+		class="org.esco.sso.security.saml.opensaml.OpenSaml20SpProcessor">
+		<property name="spConfig" ref="spConfig" />
+		<property name="clockSkewSeconds" value="60" />
+		<property name="samlMessageDecoders" ref="samlMessageDecoders" />
+
+		<property name="idpConnectors">
+			<list>
+				<ref bean="idpConnector" />
+			</list>
+		</property>
+		
+		<!-- Mocks -->
+		<property name="cas" ref="cas" />
+		<property name="samlFacade" ref="samlFacade" />
+	</bean>
+
+	<bean id="idpConfig" class="org.esco.sso.security.impl.BasicIdpConfig">
+		<property name="id" value="testIdpConfig" />
+		<property name="description" value="idp.test" />
+		<property name="pictureUrl" value="pictureUrl" />
+
+		<property name="forceAuthentication" value="true" />
+		<property name="requestBinding" value="SAML_20_HTTP_REDIRECT" />
+		<property name="responseBinding" value="SAML_20_HTTP_POST" />
+		<property name="attributeConsumingServiceIndex" value="1" />
+
+		<property name="idpEntityId" value="http://www.recia.fr/idp" />
+		<property name="idpMetadata" ref="idpMetadata" />
+	</bean>
+
+	<bean id="idpConnector"
+		class="org.esco.sso.security.saml.opensaml.OpenSaml20IdpConnector">
+		<property name="idpConfig" ref="idpConfig" />
+	</bean>
+
+	<util:map id="samlMessageDecoders">
+		<entry key="SAML_20_HTTP_POST">
+			<bean class="org.opensaml.saml2.binding.decoding.HTTPPostDecoder" />
+		</entry>
+		<entry key="SAML_20_HTTP_REDIRECT">
+			<bean
+				class="org.opensaml.saml2.binding.decoding.HTTPRedirectDeflateDecoder" />
+		</entry>
+	</util:map>
+	
+	<!-- Mocked beans -->
+	<mockito:mock id="cas" class="org.jasig.cas.CentralAuthenticationService" />
+	<mockito:mock id="samlFacade" class="org.esco.cas.ISaml20Facade" />
+	
+	<bean id="spKey" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/keys/sp_key.der" />
+	</bean>
+	
+	<bean id="idpKey" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/keys/idp_key.der" />
+	</bean>
+	
+	<bean id="spMetadata" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/metadatas/sp_metadata.xml" />
+	</bean>	
+
+	<bean id="idpMetadata" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/metadatas/idp_metadata.xml" />
+	</bean>	
+	
+	<bean id="saml20AuthnRequest" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/requests/authnRequest.xml" />
+	</bean>
+	
+	<bean id="responseSimpleSigned" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/requests/response_simple_signed.xml" />
+	</bean>
+	
+	<bean id="responseFullSigned" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/requests/response_full_signed.xml" />
+	</bean>
+	
+	<bean id="responseAttacked1" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/requests/response_attacked1.xml" />
+	</bean>
+	
+	<bean id="responseAttacked2" class="org.springframework.core.io.ClassPathResource">
+		<constructor-arg type="String" value="saml/requests/response_attacked2.xml" />
 	</bean>
 	
 	<bean id="saml20Assertion" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/request/assertion.xml" />
+		<constructor-arg type="String" value="saml/requests/assertion.xml" />
 	</bean>
 	
 </beans>

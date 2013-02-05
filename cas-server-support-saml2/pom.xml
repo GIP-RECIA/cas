@@ -118,7 +118,13 @@
 			<scope>test</scope>
 			<type>jar</type>
 		</dependency>
-
+		<dependency>
+       		<groupId>org.kubek2k</groupId>
+       		<artifactId>springockito</artifactId>
+       		<version>1.0.5</version>
+       		<scope>test</scope>
+     	</dependency>
+     
 		<dependency>
 			<groupId>commons-collections</groupId>
 			<artifactId>commons-collections</artifactId>

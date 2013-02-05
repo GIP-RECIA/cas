@@ -23,14 +23,16 @@ import org.opensaml.saml2.metadata.SPSSODescriptor;
 import org.opensaml.saml2.metadata.SingleLogoutService;
 import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
+import org.opensaml.security.MetadataCredentialResolver;
+import org.opensaml.security.MetadataCriteria;
 import org.opensaml.xml.parse.XMLParserException;
 import org.opensaml.xml.security.Criteria;
 import org.opensaml.xml.security.CriteriaSet;
 import org.opensaml.xml.security.SecurityException;
-import org.opensaml.xml.security.credential.Credential;
 import org.opensaml.xml.security.credential.UsageType;
-import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
-import org.opensaml.xml.security.keyinfo.KeyInfoCriteria;
+import org.opensaml.xml.security.criteria.EntityIDCriteria;
+import org.opensaml.xml.security.criteria.UsageCriteria;
+import org.opensaml.xml.security.x509.BasicX509Credential;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
@@ -87,7 +89,7 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 
 	private Map<Integer, AttributeConsumingService> attributeConsumingServices = new HashMap<Integer, AttributeConsumingService>();
 
-	private Map<UsageType, Credential> spCredentials = new HashMap<UsageType, Credential>();
+	private Map<UsageType, BasicX509Credential> spCredentials = new HashMap<UsageType, BasicX509Credential>();
 
 	@Override
 	public PrivateKey getDecryptionKey() {
@@ -99,12 +101,12 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 		return this.signingKey;
 	}
 	@Override
-	public Credential getSigningCredential() {
+	public BasicX509Credential getSigningCredential() {
 		return this.spCredentials.get(UsageType.SIGNING);
 	}
 
 	@Override
-	public Credential getDecryptionCredential() {
+	public BasicX509Credential getDecryptionCredential() {
 		return this.spCredentials.get(UsageType.ENCRYPTION);
 	}
 
@@ -178,12 +180,16 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 						UsageType usageType = keyDescriptor.getUse();
 						org.opensaml.xml.signature.KeyInfo keyInfo = keyDescriptor.getKeyInfo();
 						if (keyInfo != null) {
-							KeyInfoCredentialResolver resolver = org.opensaml.xml.security.SecurityHelper.buildBasicInlineKeyInfoResolver();
+							MetadataCredentialResolver mcr = new MetadataCredentialResolver(this.spMetadataProvider);
 
-							Criteria criteria = new KeyInfoCriteria(keyInfo);
-							CriteriaSet criteriaSet = new CriteriaSet(criteria);
+							Criteria criteria1 = new UsageCriteria(keyDescriptor.getUse());
+							Criteria criteria2 = new EntityIDCriteria(this.getEntityId());
+							Criteria criteria3 = new MetadataCriteria(SPSSODescriptor.DEFAULT_ELEMENT_NAME, null);
+							CriteriaSet criteriaSet = new CriteriaSet(criteria1);
+							criteriaSet.add(criteria2);
+							criteriaSet.add(criteria3);
 							try {
-								Credential credentials = resolver.resolveSingle(criteriaSet);
+								BasicX509Credential credentials = (BasicX509Credential) mcr.resolveSingle(criteriaSet);
 								this.spCredentials.put(usageType, credentials);
 							} catch (SecurityException e) {
 								CasSpConfig.LOGGER.error("Error while loading SP metadata credentials !", e);
@@ -212,10 +218,10 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 					"No SingleLogoutService location provided in SP metadata for binding [%s]", binding));
 		}
 
-		Credential signingCredential = this.spCredentials.get(UsageType.SIGNING);
+		BasicX509Credential signingCredential = this.spCredentials.get(UsageType.SIGNING);
 		Assert.notNull(signingCredential, "No signing credential provided in SP metadata !");
 
-		Credential encryptionCredential = this.spCredentials.get(UsageType.ENCRYPTION);
+		BasicX509Credential encryptionCredential = this.spCredentials.get(UsageType.ENCRYPTION);
 		if (encryptionCredential == null) {
 			this.spCredentials.put(UsageType.ENCRYPTION, signingCredential);
 		}

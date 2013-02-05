@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.security.PrivateKey;
 
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.opensaml.xml.security.credential.Credential;
+import org.opensaml.xml.security.x509.BasicX509Credential;
 
 /**
  * SP configuration.
@@ -44,9 +44,9 @@ public interface ISpConfig extends Serializable {
 	PrivateKey getSigningKey();
 
 	/** Used to encrypt assertions. */
-	Credential getDecryptionCredential();
+	BasicX509Credential getDecryptionCredential();
 
 	/** Used for something ?. */
-	Credential getSigningCredential();
+	BasicX509Credential getSigningCredential();
 
 }
