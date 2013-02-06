@@ -262,15 +262,15 @@ public abstract class OpenSamlHelper {
 	/**
 	 * Encode a SAML2 request for the HTTP-POST binding.
 	 * 
-	 * @param request the request
+	 * @param signable the request
 	 * @return the encoded request
 	 * @throws IOException
 	 */
-	public static String httpPostEncode(final SignableSAMLObject request) throws IOException {
+	public static String httpPostEncode(final SignableSAMLObject signable) throws IOException {
 		String base64EncodedRequest = null;
 		ByteArrayOutputStream byteArrayOutputStream = null;
 
-		if (request != null) {
+		if (signable != null) {
 
 			// TODO MBD: Use OpenSaml encoders
 			//			VelocityEngine engine = new VelocityEngine();
@@ -284,11 +284,11 @@ public abstract class OpenSamlHelper {
 			try {
 				// Now we must build our representation to put into the html form to
 				// be submitted to the idp
-				Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(request);
-				org.w3c.dom.Element authDOM = marshaller.marshall(request);
+				Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(signable);
+				org.w3c.dom.Element authDOM = marshaller.marshall(signable);
 
 				//Signing the request
-				Signature signature = request.getSignature();
+				Signature signature = signable.getSignature();
 				Assert.notNull(signature, "The request is not signed !");
 				Signer.signObject(signature);
 
@@ -296,25 +296,45 @@ public abstract class OpenSamlHelper {
 				XMLHelper.writeNode(authDOM, rspWrt);
 				String messageXML = rspWrt.toString();
 
-				byteArrayOutputStream = new ByteArrayOutputStream();
+				// Encode XML message
+				base64EncodedRequest = OpenSamlHelper.httpPostEncode(messageXML);
 
-				// Base 64 Encoded Only for HTTP POST binding
-				byteArrayOutputStream.write(messageXML.getBytes());
-				byteArrayOutputStream.flush();
-				base64EncodedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
-
-				if (OpenSamlHelper.LOGGER.isDebugEnabled()) {
-					OpenSamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", messageXML));
-					OpenSamlHelper.LOGGER.debug(String.format("Encoded HTTP-POST Request: %s", base64EncodedRequest));
-				}
 			} catch (MarshallingException e) {
 				OpenSamlHelper.LOGGER.error("Error while marshalling SAML 2.0 Request !", e);
 			} catch (SignatureException e) {
 				OpenSamlHelper.LOGGER.error("Error while signing SAML 2.0 Request !", e);
-			} finally {
-				if (byteArrayOutputStream != null) {
-					byteArrayOutputStream.close();
-				}
+			}
+		}
+
+		return base64EncodedRequest;
+	}
+
+	/**
+	 * Encode a SAML2 request for the HTTP-POST binding.
+	 * 
+	 * @param signable the request
+	 * @return the encoded request
+	 * @throws IOException
+	 */
+	public static String httpPostEncode(final String samlMessage) throws IOException {
+		ByteArrayOutputStream byteArrayOutputStream = null;
+		String base64EncodedRequest = null;
+
+		try {
+			byteArrayOutputStream = new ByteArrayOutputStream();
+
+			// Base 64 Encoded Only for HTTP POST binding
+			byteArrayOutputStream.write(samlMessage.getBytes());
+			byteArrayOutputStream.flush();
+			base64EncodedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
+
+			if (OpenSamlHelper.LOGGER.isDebugEnabled()) {
+				OpenSamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", samlMessage));
+				OpenSamlHelper.LOGGER.debug(String.format("Encoded HTTP-POST Request: %s", base64EncodedRequest));
+			}
+		} finally {
+			if (byteArrayOutputStream != null) {
+				byteArrayOutputStream.close();
 			}
 		}
 
@@ -349,22 +369,9 @@ public abstract class OpenSamlHelper {
 				XMLHelper.writeNode(authDOM, rspWrt);
 				String messageXML = rspWrt.toString();
 
-				Deflater deflater = new Deflater(Deflater.DEFLATED, true);
-				byteArrayOutputStream = new ByteArrayOutputStream();
-				deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream, deflater);
+				// Encode XML message
+				urlEncodedRequest = OpenSamlHelper.httpRedirectEncode(messageXML);
 
-				// Deflated then Base 64 encoded then Url Encoded for HTTP REDIRECT Binding
-				deflaterOutputStream.write(messageXML.getBytes());
-				deflaterOutputStream.finish();
-				deflater.finish();
-
-				String deflatedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
-				urlEncodedRequest = URLEncoder.encode(deflatedRequest, OpenSamlHelper.CHAR_ENCODING);
-
-				if (OpenSamlHelper.LOGGER.isDebugEnabled()) {
-					OpenSamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", messageXML));
-					OpenSamlHelper.LOGGER.debug(String.format("Encoded HTTP-Redirect Request: %s", urlEncodedRequest));
-				}
 			} catch (MarshallingException e) {
 				OpenSamlHelper.LOGGER.error("Error while marshalling SAML 2.0 Request !", e);
 			} catch (SignatureException e) {
@@ -376,6 +383,48 @@ public abstract class OpenSamlHelper {
 				if (deflaterOutputStream != null) {
 					deflaterOutputStream.close();
 				}
+			}
+		}
+
+		return urlEncodedRequest;
+	}
+
+	/**
+	 * Encode a SAML2 request for the HTTP-redirect binding.
+	 * 
+	 * @param request the request
+	 * @return the encoded request
+	 * @throws IOException
+	 */
+	public static String httpRedirectEncode(final String samlMessage) throws IOException {
+		String urlEncodedRequest = null;
+		ByteArrayOutputStream byteArrayOutputStream = null;
+		DeflaterOutputStream deflaterOutputStream = null;
+
+		try {
+
+			Deflater deflater = new Deflater(Deflater.DEFLATED, true);
+			byteArrayOutputStream = new ByteArrayOutputStream();
+			deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream, deflater);
+
+			// Deflated then Base 64 encoded then Url Encoded for HTTP REDIRECT Binding
+			deflaterOutputStream.write(samlMessage.getBytes());
+			deflaterOutputStream.finish();
+			deflater.finish();
+
+			String deflatedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
+			urlEncodedRequest = URLEncoder.encode(deflatedRequest, OpenSamlHelper.CHAR_ENCODING);
+
+			if (OpenSamlHelper.LOGGER.isDebugEnabled()) {
+				OpenSamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", samlMessage));
+				OpenSamlHelper.LOGGER.debug(String.format("Encoded HTTP-Redirect Request: %s", urlEncodedRequest));
+			}
+		} finally {
+			if (byteArrayOutputStream != null) {
+				byteArrayOutputStream.close();
+			}
+			if (deflaterOutputStream != null) {
+				deflaterOutputStream.close();
 			}
 		}
 
