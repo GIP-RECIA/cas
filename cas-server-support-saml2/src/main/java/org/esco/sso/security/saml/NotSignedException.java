@@ -9,7 +9,7 @@ package org.esco.sso.security.saml;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class NotSignedException extends Exception{
+public class NotSignedException extends Exception {
 
 	/** SVUID. */
 	private static final long serialVersionUID = -6526199098196184344L;

@@ -304,8 +304,6 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 			authnRequest.setAttributeConsumingServiceIndex(this.idpConfig.getAttributeConsumingServiceIndex());
 		}
 
-		this.getSaml20SpProcessor().signSamlObject(authnRequest);
-
 		//Subject subject = this.subjectBuilder.buildObject();
 		//authnRequest.setSubject(subject);
 
@@ -314,6 +312,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		conditions.setNotBefore(this.buildNotBeforeTime(issueInstant));
 		conditions.setNotOnOrAfter(this.buildNotOnOrAfterTime(issueInstant));
 		authnRequest.setConditions(conditions);
+
+		this.getSaml20SpProcessor().signSamlObject(authnRequest);
 
 		return authnRequest;
 	}
