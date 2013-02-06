@@ -50,8 +50,11 @@ import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AttributeStatement;
 import org.opensaml.saml2.core.AuthnStatement;
+import org.opensaml.saml2.core.BaseID;
 import org.opensaml.saml2.core.Conditions;
 import org.opensaml.saml2.core.EncryptedAssertion;
+import org.opensaml.saml2.core.EncryptedAttribute;
+import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -456,7 +459,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	@SuppressWarnings("unchecked")
 	protected SamlResponseData processSaml20AuthnResponse(final Response authnResponse,
 			final SamlBindingEnum binding, final ISaml20IdpConnector idpConnector) throws SamlProcessingException,
-			ValidationException, DecryptionException {
+			ValidationException, DecryptionException, SecurityException {
 		Assert.notNull(authnResponse, "Authn Response must be supplied !");
 		this.logger.debug("Processing a SAML 2.0 Response...");
 
@@ -486,9 +489,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			this.logger.debug("Unable to validate Response signature trust ! We will try to validate the assertions signatures ...", e);
 		}
 
-		final Decrypter decrypter = this.getDecrypter();
-
-		for (Assertion assertion : this.retrieveAllAssertions(authnResponse, decrypter)) {
+		for (Assertion assertion : this.retrieveAllAssertions(authnResponse)) {
 			this.validateConditions(assertion);
 
 			try {
@@ -498,7 +499,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 				if (!responseSigned) {
 					// if nether response or assertion are signed => validation exception
-					throw new ValidationException("SAML Authn Response signature missing !");
+					throw new SecurityException("SAML Authn Response or Assertion signature missing !");
 				}
 			}
 
@@ -767,53 +768,6 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	}
 
 	/**
-	 * Retrieve the first normal assertion.
-	 * 
-	 * @param samlResponse
-	 *            the saml response containing the assertions.
-	 * @return the first normal assertion. It can be null !
-	 */
-	protected Assertion retieveFirstAssertion(final Response samlResponse) {
-		Validate.notNull(samlResponse, "Response must be supplied !");
-
-		List<Assertion> assertions = samlResponse.getAssertions();
-		Assertion assertion = null;
-		if (assertions != null) {
-			assertion = assertions.iterator().next();
-		}
-
-		return assertion;
-	}
-
-	/**
-	 * Retrieve the first encrypted assertion.
-	 * 
-	 * @param samlResponse
-	 *            the saml response containing the assertions.
-	 * @param decrypter
-	 * @return the first encrypted assertion. It can be null !
-	 * @throws DecryptionException
-	 *             in case of decryption problem.
-	 */
-	protected Assertion retieveFirstEncryptedAssertion(final Response samlResponse, final Decrypter decrypter) throws DecryptionException {
-		Validate.notNull(samlResponse, "Response must be supplied !");
-
-		List<EncryptedAssertion> encAssertions = samlResponse.getEncryptedAssertions();
-		EncryptedAssertion encAssertion = null;
-		Assertion assertion = null;
-
-		if (!CollectionUtils.isEmpty(encAssertions)) {
-			encAssertion = encAssertions.iterator().next();
-		}
-
-		if ((encAssertion != null) && (decrypter != null)) {
-			assertion = decrypter.decrypt(encAssertion);
-		}
-
-		return assertion;
-	}
-
-	/**
 	 * Retrieve all assertions, normal ones and encrypted ones if a private key
 	 * was provided.
 	 * 
@@ -823,14 +777,17 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * @throws DecryptionException
 	 *             in case of decryption problem.
 	 */
-	protected List<Assertion> retrieveAllAssertions(final Response samlResponse, final Decrypter decrypter) throws DecryptionException {
+	protected List<Assertion> retrieveAllAssertions(final Response samlResponse) throws DecryptionException {
 		List<Assertion> allAssertions = new ArrayList<Assertion>();
 		if (samlResponse != null) {
+			// Normal Assertions
 			List<Assertion> normalAssertions = samlResponse.getAssertions();
 			if (!CollectionUtils.isEmpty(normalAssertions)) {
 				allAssertions.addAll(normalAssertions);
 			}
 
+			// Encrypted Assertions
+			final Decrypter decrypter = this.getDecrypter();
 			List<EncryptedAssertion> encAssertions = samlResponse.getEncryptedAssertions();
 			if ((decrypter != null) && (!CollectionUtils.isEmpty(encAssertions))) {
 				for (EncryptedAssertion encAssertion : samlResponse.getEncryptedAssertions()) {
@@ -848,8 +805,11 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * 
 	 * @param assertion the assertion
 	 * @param attributesMap the map to put attributes into
+	 * @throws DecryptionException
+	 * @throws SecurityException
 	 */
-	protected void processAssertionAttributes(final Assertion assertion, final Map<String, List<String>> attributesMap) {
+	protected void processAssertionAttributes(final Assertion assertion,
+			final Map<String, List<String>> attributesMap) throws DecryptionException, SecurityException {
 		List<Attribute> attributes = this.retrieveAttributes(assertion);
 		if (!CollectionUtils.isEmpty(attributes)) {
 			for (Attribute attr : attributes) {
@@ -863,8 +823,16 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 							}
 						}
 					}
+
+					final String attrName = attr.getName();
 					if (!CollectionUtils.isEmpty(values)) {
-						attributesMap.put(attr.getFriendlyName(), values);
+						List<String> attrReplaced = attributesMap.put(attrName, values);
+
+						// if attrReplaced is not null attributes name is not unique !
+						if (attrReplaced != null) {
+							throw new SecurityException(String.format(
+									"Assertion contained multiple attributes with same name: [%1$s] !", attrName));
+						}
 					}
 				}
 			}
@@ -955,8 +923,11 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * @return the validated subject. It can be null !
 	 * @throws ValidationException
 	 *             in case of validation problem
+	 * @throws DecryptionException
+	 * @throws SecurityException
 	 */
-	protected Subject validateAndRetrieveSubject(final Assertion assertion) throws ValidationException {
+	protected Subject validateAndRetrieveSubject(final Assertion assertion)
+			throws ValidationException, DecryptionException, SecurityException {
 		Subject subject = null;
 		if (assertion != null) {
 			subject = assertion.getSubject();
@@ -965,22 +936,33 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			SubjectConfirmationData scData = null;
 
 			if (subject != null) {
+				// Check subject confirmations
 				subjectConfirmations = subject.getSubjectConfirmations();
-			}
+				if (!CollectionUtils.isEmpty(subjectConfirmations)) {
+					for (SubjectConfirmation subjectConfirmation : subjectConfirmations) {
+						if (subjectConfirmation != null) {
+							scData = subjectConfirmation.getSubjectConfirmationData();
+							this.validateTimes(scData.getNotBefore(), scData.getNotOnOrAfter());
+						}
+					}
+				}
 
-			if (!CollectionUtils.isEmpty(subjectConfirmations)) {
-				for (SubjectConfirmation subjectConfirmation : subjectConfirmations) {
-					if (subjectConfirmation != null) {
-						scData = subjectConfirmation.getSubjectConfirmationData();
-						this.validateTimes(scData.getNotBefore(), scData.getNotOnOrAfter());
+				// Manage Encrypted ID
+				final Decrypter decrypter = this.getDecrypter();
+				final EncryptedID encryptedId = subject.getEncryptedID();
+				if ((decrypter != null) && (encryptedId != null)) {
+					SAMLObject id = decrypter.decrypt(encryptedId);
+					if (NameID.class.isAssignableFrom(id.getClass())) {
+						subject.setNameID((NameID)id);
+					} else if (BaseID.class.isAssignableFrom(id.getClass())) {
+						subject.setBaseID((BaseID)id);
+					} else {
+						throw new SecurityException("Encrypted id wasn't of type NameID nor BaseID !");
 					}
 				}
 			}
-
-			@SuppressWarnings("unused")
-			NameID nameId = subject.getNameID();
-
 		}
+
 		return subject;
 	}
 
@@ -1013,17 +995,29 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * @param assertion
 	 *            the assertion containing the attributes
 	 * @return the list of all attributes.
+	 * @throws DecryptionException
 	 */
-	protected List<Attribute> retrieveAttributes(final Assertion assertion) {
+	protected List<Attribute> retrieveAttributes(final Assertion assertion) throws DecryptionException {
 		List<Attribute> attributes = new ArrayList<Attribute>();
 
 		if (assertion != null) {
 			List<AttributeStatement> statements = assertion.getAttributeStatements();
 			if (!CollectionUtils.isEmpty(statements)) {
 				for (AttributeStatement statement : statements) {
+					// Get all attributes from statement
 					List<Attribute> attrs = statement.getAttributes();
 					if (!CollectionUtils.isEmpty(attrs)) {
 						attributes.addAll(attrs);
+					}
+
+					// Decrypt and add all encrypted attributes from statement
+					final Decrypter decrypter = this.getDecrypter();
+					List<EncryptedAttribute> encrAttrs = statement.getEncryptedAttributes();
+					if ((decrypter != null) && !CollectionUtils.isEmpty(encrAttrs)) {
+						for (EncryptedAttribute encAttr : encrAttrs) {
+							Attribute attr = decrypter.decrypt(encAttr);
+							attributes.add(attr);
+						}
 					}
 				}
 			}
