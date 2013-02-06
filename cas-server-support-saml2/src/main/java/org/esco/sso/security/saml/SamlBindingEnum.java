@@ -15,10 +15,10 @@ import org.springframework.util.StringUtils;
 public enum SamlBindingEnum {
 
 	/** SAML 2.0 HTTP-POST binding. */
-	SAML_20_HTTP_POST(SAMLConstants.SAML2_POST_BINDING_URI, "SAML 2.0 HTTP-POST binding"),
+	SAML_20_HTTP_POST(SAMLConstants.SAML2_POST_BINDING_URI, "SAML 2.0 HTTP-POST binding", "POST"),
 
 	/** SAML 2.0 HTTP-Redirect binding. */
-	SAML_20_HTTP_REDIRECT(SAMLConstants.SAML2_REDIRECT_BINDING_URI, "SAML 2.0 HTTP-Redirect binding");
+	SAML_20_HTTP_REDIRECT(SAMLConstants.SAML2_REDIRECT_BINDING_URI, "SAML 2.0 HTTP-Redirect binding", "GET");
 
 	/** Binding URI. */
 	private String uri;
@@ -26,9 +26,13 @@ public enum SamlBindingEnum {
 	/** Binding description. */
 	private String description;
 
-	private SamlBindingEnum(final String uri, final String description) {
+	/** HTTP Method. */
+	private String httpMethod;
+
+	private SamlBindingEnum(final String uri, final String description, final String httpMethod) {
 		this.uri = uri;
 		this.description = description;
+		this.httpMethod = httpMethod;
 	}
 
 	/**
@@ -57,6 +61,10 @@ public enum SamlBindingEnum {
 
 	public String getDescription() {
 		return this.description;
+	}
+
+	public String getHttpMethod() {
+		return this.httpMethod;
 	}
 
 }
