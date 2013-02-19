@@ -12,11 +12,13 @@ import org.apache.commons.logging.LogFactory;
 import org.esco.cas.ISaml20Facade;
 import org.esco.cas.authentication.principal.EmailAddressesCredentials;
 import org.esco.cas.impl.SamlAuthInfo;
-import org.esco.sso.security.saml.SamlResponseData;
+import org.esco.sso.security.saml.om.IAuthentication;
+import org.esco.sso.security.saml.om.IIncomingSaml;
+import org.esco.sso.security.saml.query.IQuery;
+import org.esco.sso.security.saml.query.impl.QueryAuthnResponse;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.web.flow.AbstractNonInteractiveCredentialsAction;
 import org.jasig.cas.web.support.WebUtils;
-import org.opensaml.saml2.core.Subject;
 import org.springframework.util.Assert;
 import org.springframework.webflow.execution.RequestContext;
 
@@ -48,25 +50,31 @@ public class Saml20EmailAuthenticationAction extends AbstractNonInteractiveCrede
 		EmailAddressesCredentials credentials = null;
 		try {
 
-			// Retrieve the context corresponding SAML response
-			HttpServletRequest request = WebUtils.getHttpServletRequest(context);
-			Object object = request.getAttribute(Saml20EmailAuthenticationAction.SAML_RESPONSE_DATA_FLOW_SCOPE_KEY);
+			// Only SAML Authn Responses need to be processed here !
+			final QueryAuthnResponse authnResp = this.extractAuthnResponseFromContext(context);
+			if (authnResp != null) {
+				// The is a valid SAML Authn Response in the context
 
-			if ((object != null) && (object instanceof SamlResponseData)) {
-				SamlResponseData responseData = (SamlResponseData) object;
+				// List of authentications
+				final List<IAuthentication> authentications = authnResp.getSamlAuthentications();
+				Assert.isTrue(authentications.size() == 1,
+						"SAML Authn Response must contain 1 and only 1 authentication !");
+
+				// Unique authentication
+				final IAuthentication authentication = authentications.iterator().next();
+
 				// If a SAML response was found, the user is already authenticated via SAML
-				List<String> emailAttributeValues = responseData.getAttribute(this.emailAttributeFriendlyName);
+				List<String> emailAttributeValues = authentication.getAttribute(this.emailAttributeFriendlyName);
 
 				credentials = new EmailAddressesCredentials(emailAttributeValues);
 
 				SamlAuthInfo authInfos = credentials.getAuthenticationInformations();
-				String idpEntityId = responseData.getOriginalRequestData().getIdpConnectorBuilder()
+				String idpEntityId = authnResp.getOriginalRequest().getIdpConnectorBuilder()
 						.getIdpConfig().getIdpEntityId();
 				Assert.notNull(idpEntityId, "The IdP entity ID cannot be null here !");
 				authInfos.setIdpEntityId(idpEntityId);
-				Subject subject = responseData.getSamlSubject();
-				authInfos.setIdpSubject(subject);
-				authInfos.setSessionIndex(responseData.getSessionIndex());
+				authInfos.setIdpSubject(authentication.getSubjectId());
+				authInfos.setSessionIndex(authentication.getSessionIndex());
 
 				// Put email credentials in flow scope
 				context.getFlowScope().put(Saml20EmailAuthenticationAction.SAML_CREDENTIALS_FLOW_SCOPE_KEY, credentials);
@@ -76,6 +84,33 @@ public class Saml20EmailAuthenticationAction extends AbstractNonInteractiveCrede
 		}
 
 		return credentials;
+	}
+
+	/**
+	 * Extract the QueryAuthnResponse from context if there is one !
+	 * 
+	 * @param context
+	 * @return the QueryAuthnResponse or null
+	 */
+	protected QueryAuthnResponse extractAuthnResponseFromContext(final RequestContext context) {
+		QueryAuthnResponse authnResp = null;
+
+		// Retrieve the context corresponding SAML response
+		HttpServletRequest request = WebUtils.getHttpServletRequest(context);
+		Object object = request.getAttribute(Saml20EmailAuthenticationAction.SAML_RESPONSE_DATA_FLOW_SCOPE_KEY);
+
+		// Only SAML Authn Responses need to be processed here !
+		if ((object != null) && (object instanceof IIncomingSaml)) {
+			final IIncomingSaml incomingSaml = (IIncomingSaml) object;
+			final IQuery samlQuery = incomingSaml.getSamlQuery();
+
+			if (samlQuery instanceof QueryAuthnResponse) {
+				// Our incoming SAML message is an Authn Response
+				authnResp = (QueryAuthnResponse) samlQuery;
+			}
+		}
+
+		return authnResp;
 	}
 
 	/**

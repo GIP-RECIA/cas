@@ -1,0 +1,13 @@
+<samlp:LogoutResponse xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+	xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_cbb63e9741259e3f1c98a1ae38ac5ac25889720b32"
+	Version="2.0" IssueInstant="2008-06-03T12:59:57Z"
+	Destination="https://foodle.feide.no/simplesaml/saml2/sp/SingleLogoutService.php"
+	InResponseTo="_72424ea37e28763e351189529639b9c2b150ff37e5">
+	<saml:Issuer>https://openidp.feide.no</saml:Issuer>
+	<samlp:Status>
+		<samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success">
+		</samlp:StatusCode>
+		<samlp:StatusMessage>Successfully logged out from service
+			https://openidp.feide.no</samlp:StatusMessage>
+	</samlp:Status>
+</samlp:LogoutResponse>

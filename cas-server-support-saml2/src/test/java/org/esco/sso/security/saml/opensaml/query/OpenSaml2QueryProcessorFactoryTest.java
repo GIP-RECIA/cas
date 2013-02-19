@@ -1,0 +1,227 @@
+/**
+ * 
+ */
+package org.esco.sso.security.saml.opensaml.query;
+
+import java.io.IOException;
+
+import org.esco.sso.security.saml.ISaml20SpProcessor;
+import org.esco.sso.security.saml.SamlBindingEnum;
+import org.esco.sso.security.saml.exception.SamlProcessingException;
+import org.esco.sso.security.saml.exception.SamlSecurityException;
+import org.esco.sso.security.saml.exception.UnsupportedSamlOperation;
+import org.esco.sso.security.saml.query.IQueryProcessor;
+import org.esco.sso.security.saml.util.SamlHelper;
+import org.esco.sso.security.saml.util.SamlTestResourcesHelper;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.opensaml.DefaultBootstrap;
+import org.opensaml.xml.ConfigurationException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+/**
+ * Integration Test of Query Processor Factory with opensaml2 library.
+ * 
+ * @author GIP RECIA 2013 - Maxime BOSSARD.
+ *
+ */
+@RunWith(value=SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations="classpath:openSaml2QueryProcessorFactoryContext.xml")
+public class OpenSaml2QueryProcessorFactoryTest {
+
+	@Mock
+	private ISaml20SpProcessor spProcessor;
+
+	@Autowired
+	private OpenSaml2QueryProcessorFactory factory;
+
+	@javax.annotation.Resource(name="responseSimpleSigned")
+	private ClassPathResource responseSimpleSigned;
+
+	@javax.annotation.Resource(name="sloResponse")
+	private ClassPathResource sloResponse;
+
+	@javax.annotation.Resource(name="authnRequest")
+	private ClassPathResource authnRequest;
+
+	@javax.annotation.Resource(name="responseAttacked1")
+	private ClassPathResource responseAttacked1;
+
+	@BeforeClass
+	public static void initOpenSaml() throws ConfigurationException {
+		DefaultBootstrap.bootstrap();
+	}
+
+	/**
+	 * Valid case : Authn Response with POST binding.
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testPostAuthnResponse() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		IQueryProcessor queryProcessor = this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2/POST", this.responseSimpleSigned);
+
+		Assert.assertEquals("Wrong type of query processor built !", AuthnResponseQueryProcessor.class, queryProcessor.getClass());
+
+	}
+
+	/**
+	 * Valid case : Authn Response with Redirect binding.
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testRedirectAuthnResponse() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_REDIRECT;
+		IQueryProcessor queryProcessor = this.manageRedirectMessage(binding, "/cas/Shibboleth.sso/SAML2/Redirect", this.responseSimpleSigned);
+
+		Assert.assertEquals("Wrong type of query processor built !", AuthnResponseQueryProcessor.class, queryProcessor.getClass());
+	}
+
+	/**
+	 * Valid case : SLO response with POST binding.
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testPostSloResponse() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		IQueryProcessor queryProcessor = this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2/POST", this.sloResponse);
+
+		Assert.assertEquals("Wrong type of query processor built !", SloResponseQueryProcessor.class, queryProcessor.getClass());
+	}
+
+	/**
+	 * Valid case : SLO response with Redirect binding.
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testRedirectSloResponse() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_REDIRECT;
+		IQueryProcessor queryProcessor = this.manageRedirectMessage(binding, "/cas/Shibboleth.sso/SAML2/Redirect", this.sloResponse);
+
+		Assert.assertEquals("Wrong type of query processor built !", SloResponseQueryProcessor.class, queryProcessor.getClass());
+	}
+
+	/**
+	 * Error case : Authn Response with Post binding but bad endpoint.
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=SamlProcessingException.class)
+	public void testPostAuthnResponseBadEndpoint1() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		IQueryProcessor queryProcessor = this.managePostMessage(binding, "/cas/Shibboleth.sso/SLO/POST", this.responseSimpleSigned);
+
+		// Should not be processed !
+		queryProcessor.processIncomingSamlMessage();
+	}
+
+	/**
+	 * Error case : Authn Response with Post binding but bad endpoint.
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=SamlProcessingException.class)
+	public void testPostAuthnResponseBadEndpoint2() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		IQueryProcessor queryProcessor = this.managePostMessage(binding, "/cas/Shibboleth.sso/Truc/POST", this.responseSimpleSigned);
+
+		// Should not be processed !
+		queryProcessor.processIncomingSamlMessage();
+	}
+
+	/**
+	 * Error case : Authn Response with Post binding but bad encoding.
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=SamlProcessingException.class)
+	public void testPostAuthnResponseBadEncoding() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2/Redirect", this.responseSimpleSigned);
+	}
+
+	/**
+	 * Error case : Authn Response with Post binding but not supported encoding
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=UnsupportedSamlOperation.class)
+	public void testPostAuthnResponseNotExistingEncoding1() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2/Truc", this.responseSimpleSigned);
+	}
+
+	/**
+	 * Error case : Authn Response with Post binding but not supported encoding
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=UnsupportedSamlOperation.class)
+	public void testPostAuthnResponseNotExistingEncoding2() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2", this.responseSimpleSigned);
+	}
+
+	/**
+	 * Error case : Authn Request currently not processed with this config.
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=UnsupportedSamlOperation.class)
+	public void testPostAuthnRequest() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2/POST", this.authnRequest);
+	}
+
+	/**
+	 * Test Attack 1 of AuthnResponse.
+	 * Attack 1 : Corruption of XML tree = invalid XML
+	 * 
+	 * @throws Exception
+	 */
+	@Test(expected=SamlProcessingException.class)
+	public void testAuthnResponseAttacked1() throws Exception {
+		SamlBindingEnum binding = SamlBindingEnum.SAML_20_HTTP_POST;
+		this.managePostMessage(binding, "/cas/Shibboleth.sso/SAML2/POST", this.responseAttacked1);
+	}
+
+	protected IQueryProcessor managePostMessage(final SamlBindingEnum binding, final String endpointUri, final Resource resourceMessage) throws IOException, UnsupportedSamlOperation,
+	SamlProcessingException, SamlSecurityException {
+		String samlMessage = SamlTestResourcesHelper.readFile(resourceMessage);
+		String encodedMessage = SamlHelper.httpPostEncode(samlMessage);
+
+		return this.manageMessage(binding, endpointUri, encodedMessage);
+	}
+
+	protected IQueryProcessor manageRedirectMessage(final SamlBindingEnum binding, final String endpointUri, final Resource resourceMessage) throws IOException, UnsupportedSamlOperation,
+	SamlProcessingException, SamlSecurityException {
+		String samlMessage = SamlTestResourcesHelper.readFile(resourceMessage);
+		String encodedMessage = SamlHelper.httpRedirectEncode(samlMessage);
+
+		return this.manageMessage(binding, endpointUri, encodedMessage);
+	}
+
+	protected IQueryProcessor manageMessage(final SamlBindingEnum binding, final String endpointUri, final String encodedMessage) throws IOException, UnsupportedSamlOperation,
+	SamlProcessingException, SamlSecurityException {
+		MockHttpServletRequest mockHttpRequest = SamlTestResourcesHelper.BuildSamlMockResponse(encodedMessage, binding.getHttpMethod());
+		mockHttpRequest.setRequestURI(endpointUri);
+
+		IQueryProcessor queryProcessor = this.factory.buildQueryProcessor(this.spProcessor, mockHttpRequest);
+
+		Assert.assertNotNull("Query processor not built !", queryProcessor);
+		return queryProcessor;
+	}
+
+}

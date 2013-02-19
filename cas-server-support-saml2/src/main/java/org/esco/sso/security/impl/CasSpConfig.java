@@ -141,7 +141,7 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 			if (!CollectionUtils.isEmpty(acServices)) {
 				for (AssertionConsumerService acService : acServices) {
 					if (acService != null) {
-						SamlBindingEnum binding = SamlBindingEnum.fromUri(acService.getBinding());
+						SamlBindingEnum binding = SamlBindingEnum.fromSamlUri(acService.getBinding());
 						if (binding != null) {
 							this.spAssertionConsumerServices.put(binding, acService);
 						}
@@ -154,7 +154,7 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 			if (!CollectionUtils.isEmpty(slServices)) {
 				for (SingleLogoutService slService : slServices) {
 					if (slService != null) {
-						SamlBindingEnum binding = SamlBindingEnum.fromUri(slService.getBinding());
+						SamlBindingEnum binding = SamlBindingEnum.fromSamlUri(slService.getBinding());
 						if (binding != null) {
 							this.spSingleLogoutServices.put(binding, slService);
 						}

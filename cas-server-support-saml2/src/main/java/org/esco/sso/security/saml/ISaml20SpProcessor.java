@@ -7,6 +7,10 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.esco.cas.ISaml20Facade;
 import org.esco.sso.security.ISpConfig;
+import org.esco.sso.security.saml.exception.SamlProcessingException;
+import org.esco.sso.security.saml.exception.UnsupportedSamlOperation;
+import org.esco.sso.security.saml.om.IIncomingSaml;
+import org.esco.sso.security.saml.om.IRequestWaitingForResponse;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.saml2.encryption.Decrypter;
 import org.opensaml.xml.signature.Signature;
@@ -20,24 +24,14 @@ import org.opensaml.xml.signature.Signature;
 public interface ISaml20SpProcessor {
 
 	/**
-	 * Process an incoming SAML 2.0 request.
+	 * Process an incoming SAML 2.0 HTTP request.
 	 * 
 	 * @param request the HttpServletRequest containing the SAML 2.0 request
 	 * @return the SAML 2.0 response datas
 	 * @throws SamlProcessingException in case of problem during processing.
 	 */
-	SamlResponseData processSaml20IncomingRequest(final HttpServletRequest request,
-			final SamlBindingEnum binding) throws SamlProcessingException;
-
-	/**
-	 * Process an incoming SAML 2.0 Single Logout request.
-	 * 
-	 * @param request the HttpServletRequest containing the SAML 2.0 response
-	 * @return the SAML 2.0 response datas
-	 * @throws SamlProcessingException in case of problem during processing.
-	 */
-	SamlResponseData processSaml20IncomingSingleLogoutRequest(final HttpServletRequest request,
-			final SamlBindingEnum binding) throws SamlProcessingException;
+	IIncomingSaml processSaml20IncomingRequest(HttpServletRequest request)
+			throws SamlProcessingException, UnsupportedSamlOperation;
 
 	/**
 	 * Find the SAML 2.0 IdP Connector corresponding to an entity Id.
@@ -48,29 +42,29 @@ public interface ISaml20SpProcessor {
 	ISaml20IdpConnector findSaml20IdpConnectorToUse(String idpEntityId);
 
 	/**
-	 * Encode a SAML 2.0 signable object.
-	 * 
-	 * @param binding the SAML binding to use
-	 * @param samlObject the SAML 2.0 object
-	 * @return an ecoded and signed object.
-	 */
-	String encodeSamlObject(SamlBindingEnum binding, SignableSAMLObject samlObject);
-
-	/**
 	 * Retrieve a previously cached SAML 2.0 response which was a
 	 * response to a request.
 	 * 
 	 * @param relayState opaque reference to state information
 	 * @return the SAML 2.0 response datas
 	 */
-	SamlResponseData getCachedSaml20Response(String relayState);
+	//SamlResponseData getCachedSaml20Response(String relayState);
 
 	/**
-	 * Store a SAML request which was built on this SP for a later use.
+	 * Store a SAML request, which was built on this SP for a later use, in the cache.
 	 * 
 	 * @param requestData the request to store
 	 */
-	void storeSamlRequestDataInCache(final SamlRequestData requestData);
+	void storeRequestWaitingForResponseInCache(IRequestWaitingForResponse samlRequest);
+
+
+	/**
+	 * Retrieve a SAML request waiting for a response, stored in the cache.
+	 * 
+	 * @param inResponseToId the id of the request
+	 * @return the request waiting for a response
+	 */
+	IRequestWaitingForResponse retrieveRequestWaitingForResponse(String inResponseToId);
 
 	/**
 	 * Retrieve the SAML 2.0 Facade.
@@ -100,4 +94,12 @@ public interface ISaml20SpProcessor {
 	 * @return the signature witch signed the object
 	 */
 	Signature signSamlObject(SignableSAMLObject signable);
+
+	/**
+	 * Logout a previous authentication.
+	 * 
+	 * @param sessionIndex the IdP session index
+	 * @return true if the session was logout
+	 */
+	boolean logout(String sessionIndex);
 }

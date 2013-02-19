@@ -20,14 +20,6 @@ public interface IWayfConfig extends Serializable {
 	List<IIdpConfig> getIdpsConfig();
 
 	/**
-	 * Find an IdP config from relay state.
-	 * 
-	 * @param relayState the relay state
-	 * @return the corresponding IdP config
-	 */
-	IIdpConfig findIdpConfigByRelayState(String relayState);
-
-	/**
 	 * Find an IdP config from its Id.
 	 * 
 	 * @param id the IdP config Id

@@ -21,7 +21,7 @@ public enum SamlBindingEnum {
 	SAML_20_HTTP_REDIRECT(SAMLConstants.SAML2_REDIRECT_BINDING_URI, "SAML 2.0 HTTP-Redirect binding", "GET");
 
 	/** Binding URI. */
-	private String uri;
+	private String samlUri;
 
 	/** Binding description. */
 	private String description;
@@ -29,8 +29,8 @@ public enum SamlBindingEnum {
 	/** HTTP Method. */
 	private String httpMethod;
 
-	private SamlBindingEnum(final String uri, final String description, final String httpMethod) {
-		this.uri = uri;
+	private SamlBindingEnum(final String samlUri, final String description, final String httpMethod) {
+		this.samlUri = samlUri;
 		this.description = description;
 		this.httpMethod = httpMethod;
 	}
@@ -38,15 +38,15 @@ public enum SamlBindingEnum {
 	/**
 	 * Load the enum from a bidning URI.
 	 * 
-	 * @param uri the binding URI
+	 * @param samlUri the binding URI
 	 * @return the matching enum
 	 */
-	public static SamlBindingEnum fromUri(final String uri) {
+	public static SamlBindingEnum fromSamlUri(final String samlUri) {
 		SamlBindingEnum result = null;
 
-		if (StringUtils.hasText(uri)) {
+		if (StringUtils.hasText(samlUri)) {
 			for (SamlBindingEnum val : SamlBindingEnum.values()) {
-				if (uri.equals(val.getUri())) {
+				if (samlUri.equals(val.getUri())) {
 					result =  val;
 				}
 			}
@@ -56,7 +56,7 @@ public enum SamlBindingEnum {
 	}
 
 	public String getUri() {
-		return this.uri;
+		return this.samlUri;
 	}
 
 	public String getDescription() {

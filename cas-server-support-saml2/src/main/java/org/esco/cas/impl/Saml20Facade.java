@@ -13,8 +13,6 @@ import net.sf.ehcache.Element;
 
 import org.esco.cas.ISaml20Facade;
 import org.jasig.cas.web.support.CookieRetrievingCookieGenerator;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Subject;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.cache.ehcache.EhCacheFactoryBean;
 import org.springframework.util.Assert;
@@ -59,16 +57,9 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 			}
 			this.saml2AuthenticatedCredentialsCache.put(new Element(tgtId, authInfos));
 
-			Subject idpSubject = authInfos.getIdpSubject();
-			if (idpSubject != null) {
-				NameID nameId = idpSubject.getNameID();
-				if (nameId != null) {
-					String nameIdVal = nameId.getValue();
-					if (StringUtils.hasText(nameIdVal)) {
-						;
-					}
-					this.saml2NameIdCache.put(new Element(nameIdVal, tgtId));
-				}
+			String idpSubject = authInfos.getIdpSubject();
+			if (StringUtils.hasText(idpSubject)) {
+				this.saml2NameIdCache.put(new Element(idpSubject, tgtId));
 			}
 		}
 	}
@@ -99,15 +90,9 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 		}
 
 		if (authInfos != null) {
-			Subject idpSubject = authInfos.getIdpSubject();
-			if (idpSubject != null) {
-				NameID nameId = idpSubject.getNameID();
-				if (nameId != null) {
-					String nameIdVal = nameId.getValue();
-					if (StringUtils.hasText(nameIdVal)) {
-						this.saml2NameIdCache.remove(nameIdVal);
-					}
-				}
+			String idpSubject = authInfos.getIdpSubject();
+			if (StringUtils.hasText(idpSubject)) {
+				this.saml2NameIdCache.remove(idpSubject);
 			}
 		}
 

@@ -7,8 +7,8 @@ import java.io.Serializable;
 
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlBuildingException;
-import org.esco.sso.security.saml.SamlRequestData;
+import org.esco.sso.security.saml.exception.SamlBuildingException;
+import org.esco.sso.security.saml.om.IOutgoingSaml;
 import org.opensaml.xml.signature.SignatureTrustEngine;
 import org.springframework.core.io.Resource;
 
@@ -40,8 +40,9 @@ public interface IIdpConfig extends Serializable {
 	 * 
 	 * @param binding the SAML binding used for this request
 	 * @return the SAML 2.0 AuthnRequest
+	 * @throws SamlBuildingException
 	 */
-	SamlRequestData getSamlAuthnRequest(SamlBindingEnum binding);
+	IOutgoingSaml getSamlAuthnRequest(SamlBindingEnum binding) throws SamlBuildingException;
 
 	/**
 	 * Build a SAML Logout Request for this IdP.
@@ -50,7 +51,7 @@ public interface IIdpConfig extends Serializable {
 	 * @return the SAML 2.0 Logout Request
 	 * @throws SamlBuildingException
 	 */
-	SamlRequestData getSamlSingleLogoutRequest(SamlBindingEnum binding) throws SamlBuildingException;
+	IOutgoingSaml getSamlSingleLogoutRequest(SamlBindingEnum binding) throws SamlBuildingException;
 
 	/**
 	 * Access to the global wayf configuration.

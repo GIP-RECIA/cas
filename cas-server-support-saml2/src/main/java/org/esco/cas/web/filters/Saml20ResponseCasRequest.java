@@ -15,14 +15,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.web.flow.Saml20EmailAuthenticationAction;
 import org.esco.sso.security.saml.ISaml20SpProcessor;
-import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlHelper;
-import org.esco.sso.security.saml.SamlProcessingException;
-import org.esco.sso.security.saml.SamlRequestData;
-import org.esco.sso.security.saml.SamlResponseData;
+import org.esco.sso.security.saml.exception.SamlProcessingException;
+import org.esco.sso.security.saml.exception.UnsupportedSamlOperation;
+import org.esco.sso.security.saml.om.IIncomingSaml;
+import org.esco.sso.security.saml.query.IQuery;
+import org.esco.sso.security.saml.query.impl.QueryAuthnRequest;
+import org.esco.sso.security.saml.query.impl.QueryAuthnResponse;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 /**
  * HTTP Servlet Request Wrapper which process a SAML 2.0 response and retrieve
@@ -40,10 +41,11 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 	private Map<String, String[]> parameters;
 
 	/** SAML Response data from response processing. */
-	private SamlResponseData samlResponseData;
+	private IIncomingSaml samlIncomingMsg;
 
 	@SuppressWarnings("unchecked")
-	protected Saml20ResponseCasRequest(final HttpServletRequest request) throws SamlProcessingException {
+	protected Saml20ResponseCasRequest(final HttpServletRequest request)
+			throws SamlProcessingException, UnsupportedSamlOperation {
 		super(request);
 
 		// Unlock the map
@@ -52,16 +54,25 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 		Assert.isTrue(SamlHelper.isSamlResponse(request), "The request doesn't embed a SAML 2.0 Request !");
 
 		// Process SAML response
-		this.samlResponseData = this.processSaml2Request();
+		this.samlIncomingMsg = this.processSaml2Request();
 
-		if (this.samlResponseData != null) {
-			// Retrieve initial params
-			SamlRequestData initialRequest = this.samlResponseData.getOriginalRequestData();
-			Assert.notNull(initialRequest, "No initial request corresponding to SAML response found !");
+		if (this.samlIncomingMsg != null) {
+			final IQuery samlQuery = this.samlIncomingMsg.getSamlQuery();
+			Assert.notNull(samlQuery, "No SAML query found in IncomingSaml message !");
 
-			Map<String, String[]> initialParams = initialRequest.getParametersMap();
-			if (!CollectionUtils.isEmpty(initialParams)) {
-				this.parameters.putAll(initialParams);
+			if (QueryAuthnResponse.class.isAssignableFrom(samlQuery.getClass())) {
+				// The incoming message is a SAML Authn Response
+				final QueryAuthnResponse authnResp = (QueryAuthnResponse) samlQuery;
+				final QueryAuthnRequest authnReq = authnResp.getOriginalRequest();
+				Assert.notNull(authnReq, "No initial Authn Req request corresponding to SAML response found !");
+
+				// Retrieve initial params
+				final Map<String, String[]> initialParams = authnReq.getParametersMap();
+				Assert.notNull(initialParams, "No initial params bound to the initial request !");
+
+				if (!CollectionUtils.isEmpty(initialParams)) {
+					this.parameters.putAll(initialParams);
+				}
 			}
 
 			final String idpIdParamKey = SamlHelper.getWayfConfig().getIdpIdParamKey();
@@ -71,59 +82,20 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 			this.parameters = MapUtils.unmodifiableMap(this.parameters);
 
 			this.setAttribute(Saml20EmailAuthenticationAction.SAML_RESPONSE_DATA_FLOW_SCOPE_KEY,
-					this.samlResponseData);
+					this.samlIncomingMsg);
 		}
 	}
 
-	protected SamlResponseData processSaml2Request() throws SamlProcessingException {
-		SamlResponseData processedResponse = null;
-
-		String servletPath = this.getServletPath();
-		Saml20ResponseCasRequest.LOGGER.debug(String.format("SAML incoming request on servlet path: [%s]", servletPath));
-
-		String samlService = null;
-		String samlBinding = null;
-
-		if (StringUtils.hasText(servletPath) &&
-				servletPath.startsWith(SamlHelper.SAML2_SERVPATH_ROUTER)) {
-			String[] routingArgs = servletPath.split("/");
-
-			if ((routingArgs != null) && (routingArgs.length == 4)) {
-				samlService = routingArgs[2];
-				samlBinding = routingArgs[3];
-			}
-		}
-
-		SamlBindingEnum binding = null;
-
-		// SAML request routing ...
-		if (StringUtils.hasText(samlBinding)) {
-			if (SamlHelper.HTTP_POST_BINDING_SERVPATH_ROUTER.equals(samlBinding)) {
-				binding = SamlBindingEnum.SAML_20_HTTP_POST;
-			} else if (SamlHelper.HTTP_REDIRECT_BINDING_SERVPATH_ROUTER.equals(samlBinding)) {
-				binding = SamlBindingEnum.SAML_20_HTTP_REDIRECT;
-			} else {
-				Saml20ResponseCasRequest.LOGGER.error(String.format("Incoming SAML request with unsupported binding: [%s] !", samlBinding));
-			}
-			Saml20ResponseCasRequest.LOGGER.debug(String.format("SAML incoming request binding: [%s]", binding.name()));
-		}
+	protected IIncomingSaml processSaml2Request()
+			throws SamlProcessingException, UnsupportedSamlOperation {
+		IIncomingSaml incomingSaml = null;
 
 		final String endpointUrl = this.getRequestURL().toString();
 		final ISaml20SpProcessor spProcessor = SamlHelper.findSpProcessorToUse(endpointUrl);
 
-		if (binding != null) {
-			if (SamlHelper.ACS_SERVPATH_ROUTER.equals(samlService)) {
-				Saml20ResponseCasRequest.LOGGER.debug("SAML incoming request is destinated to Assertion Consuming Service.");
-				processedResponse = spProcessor.processSaml20IncomingRequest(this, binding);
-			} else if (SamlHelper.SLO_SERVPATH_ROUTER.equals(samlService)) {
-				Saml20ResponseCasRequest.LOGGER.debug("SAML incoming request is destinated to Single Logout Service.");
-				processedResponse = spProcessor.processSaml20IncomingSingleLogoutRequest(this, binding);
-			} else {
-				Saml20ResponseCasRequest.LOGGER.error(String.format("Incoming SAML request for unsupported service: [%s] !", samlService));
-			}
-		}
+		incomingSaml = spProcessor.processSaml20IncomingRequest(this);
 
-		if (processedResponse == null) {
+		if (incomingSaml == null) {
 			String incomingRequest = null;
 			if (SamlHelper.isSamlRequest(this)) {
 				incomingRequest = SamlHelper.getSamlRequest(this);
@@ -134,7 +106,7 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 					incomingRequest));
 		}
 
-		return processedResponse;
+		return incomingSaml;
 	}
 
 	/**

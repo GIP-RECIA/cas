@@ -35,7 +35,9 @@ IvrAz7Uj/sa2JL83lYgJkNexbmV0c4o/PHI8D24st8zqrvLupKd/gydaMcLoog==</ds:X509Certifi
 			<saml:Attribute FriendlyName="ctemail" Name="ctemail" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
 				<saml:AttributeValue>testValue</saml:AttributeValue>
 			</saml:Attribute>
-		</saml:AttributeStatement></saml:Assertion><saml:Assertion ID="ad95ffc352cf24a58b2960e07b2388da" IssueInstant="2013-02-04T09:44:37.000Z" Version="2.0" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"><saml:Subject xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
+		</saml:AttributeStatement></saml:Assertion><saml:Assertion ID="ad95ffc352cf24a58b2960e07b2388da" IssueInstant="2013-02-04T09:44:37.000Z" Version="2.0" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"><saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
+			http://www.recia.fr/idp
+		</saml:Issuer><saml:Subject xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
 			<saml:NameID Format="urn:oasis:names:tc:SAML:2.0:nameid-format:transient" NameQualifier="http://www.recia.fr/idp" SPNameQualifier="http://www.recia.fr/cas/Shibboleth.sso">edcb7729fd1e07756f454435030e38ad
 			</saml:NameID>
 			<saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
@@ -55,6 +57,6 @@ IvrAz7Uj/sa2JL83lYgJkNexbmV0c4o/PHI8D24st8zqrvLupKd/gydaMcLoog==</ds:X509Certifi
 			</saml:AuthnContext>
 		</saml:AuthnStatement><saml:AttributeStatement xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<saml:Attribute FriendlyName="ctemail" Name="ctemail" NameFormat="urn:oasis:names:tc:SAML:2.0:attrname-format:basic">
-				<saml:AttributeValue>attackedValue</saml:AttributeValue>
+				<saml:AttributeValue>testValue</saml:AttributeValue>
 			</saml:Attribute>
 		</saml:AttributeStatement></saml:Assertion></samlp:Response>

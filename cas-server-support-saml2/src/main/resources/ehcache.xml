@@ -58,15 +58,15 @@
 		memoryStoreEvictionPolicy="LRU" clearOnFlush="false" />
 
 
-	<!-- Caching SAML request data for 10 mins -->
-	<cache name="samlRequestDataCache" maxElementsInMemory="10000"
-		eternal="false" timeToIdleSeconds="600" timeToLiveSeconds="600"
+	<!-- Caching SAML requests waiting for response data for 1 hour -->
+	<cache name="samlRequestWaitingForResponseCache" maxElementsInMemory="100000"
+		eternal="false" timeToIdleSeconds="3600" timeToLiveSeconds="600"
 		overflowToDisk="true" diskSpoolBufferSizeMB="30" maxElementsOnDisk="10000000"
 		diskPersistent="true" diskExpiryThreadIntervalSeconds="120"
 		memoryStoreEvictionPolicy="LRU" clearOnFlush="false" />
 
-	<!-- Caching SAML response data for 24 hours -->
-	<cache name="samlResponseDataCache" maxElementsInMemory="10000"
+	<!-- Caching SAML authentications data for 24 hours -->
+	<cache name="samlAuthenticationCache" maxElementsInMemory="10000"
 		eternal="false" timeToIdleSeconds="86400" timeToLiveSeconds="86400"
 		overflowToDisk="true" diskSpoolBufferSizeMB="30" maxElementsOnDisk="10000000"
 		diskPersistent="true" diskExpiryThreadIntervalSeconds="120"

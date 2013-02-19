@@ -8,11 +8,6 @@ import java.io.Serializable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
-import org.esco.sso.security.saml.opensaml.OpenSamlHelper;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.io.UnmarshallingException;
-import org.springframework.util.StringUtils;
 
 /**
  * Informations about SAML 2.0 Authentication.
@@ -23,9 +18,10 @@ import org.springframework.util.StringUtils;
 public class SamlAuthInfo implements Serializable {
 
 	/** SVUID. */
-	private static final long serialVersionUID = 6429165239146373686L;
+	private static final long serialVersionUID = -2408640620469852696L;
 
 	/** Logger. */
+	@SuppressWarnings("unused")
 	private static final Log LOGGER = LogFactory.getLog(SamlAuthInfo.class);
 
 	/** Credentials used for authentication. */
@@ -35,38 +31,17 @@ public class SamlAuthInfo implements Serializable {
 	private String idpEntityId;
 
 	/** SAML 2.0 Subject sent by the IdP. */
-	private transient Subject idpSubject;
-
-	/** SAML 2.0 Subject in XML form (marshalled). */
-	private String marshalledIdpSubject;
+	private String subjectId;
 
 	/** IdP session index. */
 	private String sessionIndex;
 
-	public Subject getIdpSubject() {
-		if ((this.idpSubject == null) && StringUtils.hasText(this.marshalledIdpSubject)) {
-			try {
-				this.idpSubject = (Subject) OpenSamlHelper.unmarshallXmlObject(Subject.TYPE_NAME,
-						this.marshalledIdpSubject);
-			} catch (UnmarshallingException e) {
-				SamlAuthInfo.LOGGER.error("Error while unmarshalling authneticated SAML 2.0 Subject !", e);
-			}
-		}
-
-		return this.idpSubject;
+	public String getIdpSubject() {
+		return this.subjectId;
 	}
 
-	public void setIdpSubject(final Subject idpSubject) {
-		this.idpSubject = idpSubject;
-
-		if (idpSubject != null) {
-			try {
-				idpSubject.detach();
-				this.marshalledIdpSubject = OpenSamlHelper.marshallXmlObject(idpSubject);
-			} catch (MarshallingException e) {
-				SamlAuthInfo.LOGGER.error("Error while marshalling authneticated SAML 2.0 Subject !", e);
-			}
-		}
+	public void setIdpSubject(final String subjectId) {
+		this.subjectId = subjectId;
 	}
 
 	public ISaml20Credentials getAuthCredentials() {

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.esco.sso.security.saml;
+package org.esco.sso.security.saml.exception;
 
 /**
  * Indicate an absence of signature.

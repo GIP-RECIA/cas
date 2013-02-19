@@ -1,17 +1,36 @@
 /**
  * 
  */
-package org.esco.sso.security.saml;
+package org.esco.sso.security.saml.util;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.sso.security.IWayfConfig;
+import org.esco.sso.security.saml.ISaml20IdpConnector;
+import org.esco.sso.security.saml.ISaml20SpProcessor;
+import org.esco.sso.security.saml.SamlBindingEnum;
+import org.esco.sso.security.saml.exception.SamlProcessingException;
 import org.jasig.cas.web.support.WebUtils;
+import org.opensaml.xml.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.webflow.execution.RequestContext;
 
@@ -22,8 +41,14 @@ import org.springframework.webflow.execution.RequestContext;
 public abstract class SamlHelper {
 
 	/** Logger. */
-	@SuppressWarnings("unused")
 	private static final Log LOGGER = LogFactory.getLog(SamlHelper.class);
+
+
+	/** Name of the security logger. */
+	public static final String SECURITY_LOGGER_NAME = "Saml-Security";
+
+	/** Security logger. */
+	private static final Logger SECURITY_LOGGER = LoggerFactory.getLogger(SamlHelper.SECURITY_LOGGER_NAME);
 
 	/** SAML Response HTTP Param name. */
 	public static final String SAML_RESPONSE_PARAM_KEY = "SAMLResponse";
@@ -49,11 +74,46 @@ public abstract class SamlHelper {
 	/** HTTP Request servlet path part for a HTTP-Redirect binding. */
 	public static final String HTTP_REDIRECT_BINDING_SERVPATH_ROUTER = "Redirect";
 
+
+
+
+
+
+	/** Char separator for relay state. */
+	public static final String RELAY_STATE_SEPARATOR = "$";
+
+	/** Saml HTTP-Redirect binding encoding. */
+	public static final String CHAR_ENCODING = "UTF-8";
+
+
+
 	/** The SP processor for CAS. */
 	private static Collection<ISaml20SpProcessor> spProcessors = new ArrayList<ISaml20SpProcessor>(8);
 
 	/** The wayf config for CAS. */
 	private static IWayfConfig wayfConfig;
+
+	/**
+	 * Log a Security Problem in Security Logger and rethrow the Exception.
+	 * 
+	 * @param e
+	 * @param samlMessage
+	 * @throws SamlProcessingException
+	 */
+	public static void logSecurityProblem(final Throwable e, final String samlMessage) throws SamlProcessingException {
+		final String securityMessage;
+		// Log in security logger the SAML message cause of the security exception
+		if (StringUtils.hasText(samlMessage)) {
+			securityMessage = String.format(
+					"Plugin SAML security problem for incoming SAML message: [%1$s] !", samlMessage);
+		} else {
+			securityMessage = "Plugin SAML security problem before decoding incoming SAML message !";
+		}
+
+		SamlHelper.SECURITY_LOGGER.warn(securityMessage, e);
+
+		throw new SamlProcessingException(samlMessage, e);
+	}
 
 	/**
 	 * Retrieve the SP processor for CAS corresponding to the endpoint URL.
@@ -137,7 +197,7 @@ public abstract class SamlHelper {
 	/**
 	 * Test if the http request contain a SAML request.
 	 * 
-	 * @param context spring weblow request context
+	 * @param request the http request
 	 * @return true if the request contain a SAML Request
 	 */
 	public static boolean isSamlRequest(final HttpServletRequest request) {
@@ -161,7 +221,7 @@ public abstract class SamlHelper {
 	/**
 	 * Retrieve a SAML request from http request.
 	 * 
-	 * @param context the http request
+	 * @param request the http request
 	 * @return the SAML request.
 	 */
 	public static String getSamlRequest(final HttpServletRequest request) {
@@ -183,7 +243,7 @@ public abstract class SamlHelper {
 	/**
 	 * Test if the http request contain a SAML response.
 	 * 
-	 * @param context spring weblow request context
+	 * @param request the http request
 	 * @return true if the request contain a SAML Response
 	 */
 	public static boolean isSamlResponse(final HttpServletRequest request) {
@@ -207,11 +267,29 @@ public abstract class SamlHelper {
 	/**
 	 * Retrieve a SAML response from http request.
 	 * 
-	 * @param context the http request
+	 * @param request the http request
 	 * @return the SAML response.
 	 */
 	public static String getSamlResponse(final HttpServletRequest request) {
 		return request.getParameter(SamlHelper.SAML_RESPONSE_PARAM_KEY);
+	}
+
+	/**
+	 * Retrieve a SAML message from http request.
+	 * 
+	 * @param request the http request
+	 * @return the SAML message (can be null).
+	 */
+	public static String getEncodedSamlMesage(final HttpServletRequest request) {
+		String samlMessage = null;
+
+		if (SamlHelper.isSamlRequest(request)) {
+			samlMessage = SamlHelper.getSamlRequest(request);
+		} else if (SamlHelper.isSamlResponse(request)) {
+			samlMessage = SamlHelper.getSamlResponse(request);
+		}
+
+		return samlMessage;
 	}
 
 	/**
@@ -238,6 +316,160 @@ public abstract class SamlHelper {
 			relayState = request.getParameter(SamlHelper.RELAY_STATE_PARAM_KEY);
 		}
 		return relayState;
+	}
+
+
+
+
+
+
+
+
+	public static String base64Encode(final String text) {
+		String encodedText = Base64.encodeBytes(text.getBytes(), Base64.DONT_BREAK_LINES);
+
+		return encodedText;
+	}
+
+	public static String base64Decode(final String text) {
+		byte[] decodedText = Base64.decode(text);
+
+		return new String(decodedText);
+	}
+
+	public static String cleanupUrl(final String url) {
+		if (url == null) {
+			return null;
+		}
+
+		final int jsessionPosition = url.indexOf(";jsession");
+
+		if (jsessionPosition == -1) {
+			return url;
+		}
+
+		final int questionMarkPosition = url.indexOf("?");
+
+		if (questionMarkPosition < jsessionPosition) {
+			return url.substring(0, url.indexOf(";jsession"));
+		}
+
+		return url.substring(0, jsessionPosition)
+				+ url.substring(questionMarkPosition);
+	}
+
+	/**
+	 * Encode a SAML2 request for the HTTP-POST binding.
+	 * 
+	 * @param signable the request
+	 * @return the encoded request
+	 * @throws IOException
+	 */
+	public static String httpPostEncode(final String samlMessage) throws IOException {
+		ByteArrayOutputStream byteArrayOutputStream = null;
+		String base64EncodedRequest = null;
+
+		try {
+			byteArrayOutputStream = new ByteArrayOutputStream();
+
+			// Base 64 Encoded Only for HTTP POST binding
+			byteArrayOutputStream.write(samlMessage.getBytes());
+			byteArrayOutputStream.flush();
+			base64EncodedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
+
+			if (SamlHelper.LOGGER.isDebugEnabled()) {
+				SamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", samlMessage));
+				SamlHelper.LOGGER.debug(String.format("Encoded HTTP-POST Request: %s", base64EncodedRequest));
+			}
+		} finally {
+			if (byteArrayOutputStream != null) {
+				byteArrayOutputStream.close();
+			}
+		}
+
+		return base64EncodedRequest;
+	}
+
+	/**
+	 * Encode a SAML2 request for the HTTP-redirect binding.
+	 * 
+	 * @param request the request
+	 * @return the encoded request
+	 * @throws IOException
+	 */
+	public static String httpRedirectEncode(final String samlMessage) throws IOException {
+		String deflatedRequest = null;
+		ByteArrayOutputStream byteArrayOutputStream = null;
+		DeflaterOutputStream deflaterOutputStream = null;
+
+		try {
+			Deflater deflater = new Deflater(Deflater.DEFLATED, true);
+			byteArrayOutputStream = new ByteArrayOutputStream();
+			deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream, deflater);
+
+			// Deflated then Base 64 encoded then Url Encoded for HTTP REDIRECT Binding
+			deflaterOutputStream.write(samlMessage.getBytes());
+			deflaterOutputStream.finish();
+			deflater.finish();
+
+			deflatedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
+
+			if (SamlHelper.LOGGER.isDebugEnabled()) {
+				SamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", samlMessage));
+				SamlHelper.LOGGER.debug(String.format("Encoded HTTP-Redirect Request: %s", deflatedRequest));
+			}
+		} finally {
+			if (byteArrayOutputStream != null) {
+				byteArrayOutputStream.close();
+			}
+			if (deflaterOutputStream != null) {
+				deflaterOutputStream.close();
+			}
+		}
+
+		return deflatedRequest;
+	}
+
+	/**
+	 * Decode a SAML2 anthentication request for the HTTP-redirect binding.
+	 * 
+	 * @param authnRequest the authn request
+	 * @return the encoded request
+	 * @throws IOException
+	 */
+	public static String httpRedirectDecode(final String encodedRequest) throws IOException {
+		String inflatedRequest = null;
+
+		ByteArrayInputStream bytesIn = null;
+		InflaterInputStream inflater = null;
+
+		byte[] decodedBytes = Base64.decode(encodedRequest);
+
+		try {
+			bytesIn = new ByteArrayInputStream(decodedBytes);
+			inflater = new InflaterInputStream(bytesIn, new Inflater(true));
+			Writer writer = new StringWriter();
+			char[] buffer = new char[1024];
+
+			Reader reader = new BufferedReader(
+					new InputStreamReader(inflater, "UTF-8"));
+			int n;
+			while ((n = reader.read(buffer)) != -1) {
+				writer.write(buffer, 0, n);
+			}
+
+			inflatedRequest = writer.toString();
+		} finally {
+			if (bytesIn != null) {
+				bytesIn.close();
+			}
+			if (inflater != null) {
+				inflater.close();
+			}
+		}
+
+
+		return inflatedRequest;
 	}
 
 }

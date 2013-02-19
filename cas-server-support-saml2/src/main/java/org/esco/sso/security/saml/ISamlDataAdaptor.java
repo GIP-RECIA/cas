@@ -6,6 +6,8 @@ package org.esco.sso.security.saml;
 import java.util.Collection;
 import java.util.Map.Entry;
 
+import org.esco.sso.security.saml.om.IOutgoingSaml;
+
 /**
  * Adaptor which allow to configure the shape of SAML datas in HTTP requests.
  * 
@@ -19,12 +21,12 @@ public interface ISamlDataAdaptor {
 	 * 
 	 * @return the HTTP-Redirect URL request
 	 */
-	String buildHttpRedirectRequest(SamlRequestData samlRequestData);
+	String buildHttpRedirectBindingUrl(IOutgoingSaml outgoingData);
 
 	/**
 	 * Build the HTTP-POST binding params to send with POST method.
 	 * 
 	 * @return the HTTP-Post params request
 	 */
-	Collection<Entry<String, String>> buildHttpPostParams(SamlRequestData samlRequestData);
+	Collection<Entry<String, String>> buildHttpPostBindingParams(IOutgoingSaml outgoingData);
 }

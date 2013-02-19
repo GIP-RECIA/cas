@@ -22,9 +22,9 @@ import org.esco.cas.ISaml20Facade;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlBuildingException;
-import org.esco.sso.security.saml.SamlHelper;
-import org.esco.sso.security.saml.SamlRequestData;
+import org.esco.sso.security.saml.exception.SamlBuildingException;
+import org.esco.sso.security.saml.om.IOutgoingSaml;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -83,14 +83,14 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 
 				String httpRedirectLogoutUrl = null;
 				try {
-					final SamlRequestData logoutRequestData = idpConnector.buildSaml20SingleLogoutRequest(
+					final IOutgoingSaml outgoingSaml = idpConnector.buildSaml20SingleLogoutRequest(
 							request, SamlBindingEnum.SAML_20_HTTP_REDIRECT);
 
-					httpRedirectLogoutUrl = logoutRequestData.buildSamlHttpRedirectRequestUrl();
+					httpRedirectLogoutUrl = outgoingSaml.getHttpRedirectBindingUrl();
 
 					if (this.singleLogoutSilently) {
 						// Send silent SLO from server
-						this.silentLogout(idpConnector, logoutRequestData);
+						this.silentLogout(idpConnector, outgoingSaml);
 					} else {
 						// Redirect browser with SLO
 						mv = new ModelAndView(new RedirectView(httpRedirectLogoutUrl));
@@ -114,9 +114,9 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 		return mv;
 	}
 
-	private void silentLogout(final ISaml20IdpConnector idpConnector, final SamlRequestData logoutRequestData)
-			throws MalformedURLException, IOException {
-		URL logoutUrl = new URL(logoutRequestData.buildSamlHttpRedirectRequestUrl());
+	private void silentLogout(final ISaml20IdpConnector idpConnector,
+			final IOutgoingSaml outgoingSaml) throws MalformedURLException, IOException {
+		URL logoutUrl = new URL(outgoingSaml.getHttpRedirectBindingUrl());
 		HttpURLConnection logoutConnection = (HttpURLConnection) logoutUrl.openConnection();
 		logoutConnection.setReadTimeout(10000);
 		logoutConnection.connect();
@@ -134,14 +134,14 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 		String idpEntityId = idpConnector.getIdpConfig().getIdpEntityId();
 		if (responseCode < 0) {
 			SamlSingleLogoutController.LOGGER.warn("Unable to send SAML 2.0 Single Logout Request [{}] to IdP [{}] !",
-					logoutRequestData.getSamlRequest(), idpEntityId);
+					outgoingSaml.getSamlMessage(), idpEntityId);
 		} else if (responseCode == 200) {
 			SamlSingleLogoutController.LOGGER.info("SAML 2.0 Single Logout Request correctly received by IdP [{}] !",
 					idpEntityId);
 		} else {
 			SamlSingleLogoutController.LOGGER.warn(
 					"HTTP response code: [{}] ! Error while sending SAML 2.0 Single Logout Request [{}] to IdP [{}] !",
-					new Object[] {responseCode, logoutRequestData.getSamlRequest(), idpEntityId});
+					new Object[] {responseCode, outgoingSaml.getSamlMessage(), idpEntityId});
 		}
 
 		logoutConnection.disconnect();

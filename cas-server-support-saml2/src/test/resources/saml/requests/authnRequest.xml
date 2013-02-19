@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-
 <samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
-	ID="_bec424fa5103428909a30ff1e31168327f79474984" Version="2.0"
-	IssueInstant="2007-12-10T11:39:34Z" ForceAuthn="false" IsPassive="false"
+	ID="_db6a228bfd85e374bc998817a031c3c6f595bf7b0257443a09039b89eda38971451ee7c4fa5ed213ec1b" Version="2.0"
+	IssueInstant="2013-02-04T09:42:37.000Z" ForceAuthn="false" IsPassive="false"
 	ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-	AssertionConsumerServiceURL="http://moodle.bridge.feide.no/simplesaml/saml2/sp/AssertionConsumerService.php">
+	AssertionConsumerServiceURL="http://www.recia.fr/idp/saml2/POST/SSO">
 	<saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">
-		urn:mace:feide.no:services:no.feide.moodle
+		http://www.recia.fr/cas/Shibboleth.sso
 	</saml:Issuer>
 	<samlp:NameIDPolicy xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
 		Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
-		SPNameQualifier="moodle.bridge.feide.no" AllowCreate="true" />
+		SPNameQualifier="http://www.recia.fr/cas/Shibboleth.sso" AllowCreate="true" />
 	<samlp:RequestedAuthnContext xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
 		Comparison="exact">
 		<saml:AuthnContextClassRef xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">

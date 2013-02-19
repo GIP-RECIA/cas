@@ -13,8 +13,8 @@ import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.IWayfConfig;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlBuildingException;
-import org.esco.sso.security.saml.SamlRequestData;
+import org.esco.sso.security.saml.exception.SamlBuildingException;
+import org.esco.sso.security.saml.om.IOutgoingSaml;
 import org.esco.sso.security.saml.opensaml.OpenSamlHelper;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
@@ -131,8 +131,8 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	 * @return the authn request
 	 */
 	@Override
-	public SamlRequestData getSamlAuthnRequest(final SamlBindingEnum binding) {
-		SamlRequestData samlRequest = null;
+	public IOutgoingSaml getSamlAuthnRequest(final SamlBindingEnum binding) throws SamlBuildingException {
+		IOutgoingSaml samlRequest = null;
 
 		HttpServletRequest httpRequest = this.getCurrentRequest();
 		if (this.saml20IdpConnector != null) {
@@ -151,8 +151,8 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	 * @throws SamlBuildingException
 	 */
 	@Override
-	public SamlRequestData getSamlSingleLogoutRequest(final SamlBindingEnum binding) throws SamlBuildingException {
-		SamlRequestData samlRequest = null;
+	public IOutgoingSaml getSamlSingleLogoutRequest(final SamlBindingEnum binding) throws SamlBuildingException {
+		IOutgoingSaml samlRequest = null;
 
 		HttpServletRequest httpRequest = this.getCurrentRequest();
 		if (this.saml20IdpConnector != null) {
@@ -223,7 +223,7 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 			if (!CollectionUtils.isEmpty(ssoServices)) {
 				for (SingleSignOnService ssoService : ssoServices) {
 					if ((ssoService != null)) {
-						SamlBindingEnum binding = SamlBindingEnum.fromUri(ssoService.getBinding());
+						SamlBindingEnum binding = SamlBindingEnum.fromSamlUri(ssoService.getBinding());
 						if (binding != null) {
 							this.idpSsoEndpointUrl.put(binding, ssoService.getLocation());
 						}
@@ -236,7 +236,7 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 			if (!CollectionUtils.isEmpty(slServices)) {
 				for (SingleLogoutService slService : slServices) {
 					if ((slService != null)) {
-						SamlBindingEnum binding = SamlBindingEnum.fromUri(slService.getBinding());
+						SamlBindingEnum binding = SamlBindingEnum.fromSamlUri(slService.getBinding());
 						if (binding != null) {
 							this.idpSloEndpointUrl.put(binding, slService.getLocation());
 						}

@@ -4,14 +4,6 @@
 package org.esco.sso.security.saml.opensaml;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -23,78 +15,36 @@ import net.sf.ehcache.CacheException;
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
 
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.Validate;
 import org.esco.cas.ISaml20Facade;
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.ISpConfig;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.ISaml20SpProcessor;
-import org.esco.sso.security.saml.NotSignedException;
-import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlHelper;
-import org.esco.sso.security.saml.SamlProcessingException;
-import org.esco.sso.security.saml.SamlRequestData;
-import org.esco.sso.security.saml.SamlResponseData;
+import org.esco.sso.security.saml.exception.SamlProcessingException;
+import org.esco.sso.security.saml.exception.SamlSecurityException;
+import org.esco.sso.security.saml.exception.UnsupportedSamlOperation;
+import org.esco.sso.security.saml.om.IAuthentication;
+import org.esco.sso.security.saml.om.IIncomingSaml;
+import org.esco.sso.security.saml.om.IRequestWaitingForResponse;
+import org.esco.sso.security.saml.query.IQueryProcessor;
+import org.esco.sso.security.saml.query.IQueryProcessorFactory;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.jasig.cas.CentralAuthenticationService;
-import org.joda.time.DateTime;
-import org.joda.time.Instant;
 import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SignableSAMLObject;
-import org.opensaml.common.binding.BasicSAMLMessageContext;
-import org.opensaml.common.binding.decoding.SAMLMessageDecoder;
-import org.opensaml.common.binding.security.MessageReplayRule;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.AuthnStatement;
-import org.opensaml.saml2.core.BaseID;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.EncryptedAssertion;
-import org.opensaml.saml2.core.EncryptedAttribute;
-import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
-import org.opensaml.saml2.core.LogoutRequest;
-import org.opensaml.saml2.core.LogoutResponse;
-import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.RequestAbstractType;
-import org.opensaml.saml2.core.Response;
 import org.opensaml.saml2.core.StatusResponseType;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.SubjectConfirmation;
-import org.opensaml.saml2.core.SubjectConfirmationData;
 import org.opensaml.saml2.encryption.Decrypter;
-import org.opensaml.saml2.metadata.IDPSSODescriptor;
-import org.opensaml.security.MetadataCriteria;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.util.storage.MapBasedStorageService;
-import org.opensaml.util.storage.ReplayCache;
-import org.opensaml.util.storage.ReplayCacheEntry;
-import org.opensaml.util.storage.StorageService;
-import org.opensaml.ws.message.MessageContext;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.security.SecurityPolicyException;
-import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
 import org.opensaml.xml.Configuration;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.encryption.DecryptionException;
 import org.opensaml.xml.encryption.InlineEncryptedKeyResolver;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.security.CriteriaSet;
 import org.opensaml.xml.security.SecurityException;
 import org.opensaml.xml.security.SecurityHelper;
 import org.opensaml.xml.security.credential.BasicCredential;
 import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.credential.UsageType;
-import org.opensaml.xml.security.criteria.EntityIDCriteria;
-import org.opensaml.xml.security.criteria.UsageCriteria;
 import org.opensaml.xml.security.keyinfo.StaticKeyInfoCredentialResolver;
 import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.SignatureTrustEngine;
 import org.opensaml.xml.signature.impl.SignatureBuilder;
-import org.opensaml.xml.validation.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -112,11 +62,11 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	/** Logger. */
 	private final Logger logger = LoggerFactory.getLogger(OpenSaml20SpProcessor.class);
 
-	/** SAML 2.0 Request Data cache name. */
-	private static final String SAML2_REQUEST_DATA_CACHE_NAME = "samlRequestDataCache";
+	/** SAML 2.0 Request waiting for response cache name. */
+	private static final String SAML2_RWFR_CACHE_NAME = "samlRequestWaitingForResponseCache";
 
-	/** SAML 2.0 Response Data cache name. */
-	private static final String SAML2_RESPONSE_DATA_CACHE_NAME = "samlResponseDataCache";
+	/** SAML 2.0 Authentications cache name. */
+	private static final String SAML2_AUTHN_CACHE_NAME = "samlAuthenticationCache";
 
 	/** SP Configuration. */
 	private ISpConfig spConfig;
@@ -130,23 +80,11 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	/** SP Signing credentials (spSigningKey + spSigningCertificate). */
 	private Credential spSigningCredential;
 
-	/** SAML Message Decoder (Base64, inflater, ...). */
-	private Map<SamlBindingEnum, SAMLMessageDecoder> samlMessageDecoders;
+	/** Cache for Request which wait for a response to be received. */
+	private Ehcache samlRequestWaitingForResponseCache;
 
-	private SAMLSignatureProfileValidator signatureProfileValidator;
-
-	private MessageReplayRule rule;
-
-	private int replayMinutes;
-
-	/** Acceptable clock skew. */
-	private int clockSkewSeconds;
-
-	/** SAML Request cache. */
-	private Ehcache samlRequestDataCache;
-
-	/** SAML Response cache. */
-	private Ehcache samlResponseDataCache;
+	/** Cache for SAML authentications already processed. */
+	private Ehcache samlAuthenticationsCache;
 
 	/** IdP connectors. */
 	private Collection<ISaml20IdpConnector> idpConnectors;
@@ -160,98 +98,21 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	/** CAS service. */
 	private CentralAuthenticationService cas;
 
-	@Override
-	public SamlResponseData processSaml20IncomingRequest(final HttpServletRequest request,
-			final SamlBindingEnum binding) throws SamlProcessingException {
-		SamlResponseData response = null;
-
-		// Retrieve SAML Object from HTTP request
-		final SAMLObject samlObject;
-		try {
-			samlObject = this.extractSamlObjectFromRequest(request, binding);
-			final ISaml20IdpConnector idpConnector = this.findSaml20IdpConnectorToUse(samlObject);
-
-			Assert.notNull(idpConnector, "The IdPConnector cannot be null here !");
-
-			this.logger.debug(String.format(
-					"Incoming SAML request use the IdP connector with id [%s] .",
-					idpConnector.getIdpConfig().getId()));
-
-			// Process the SAML Object
-			if (Response.class.isAssignableFrom(samlObject.getClass())) {
-				// Process Authn Response
-				response = this.processSaml20AuthnResponse((Response)samlObject, binding, idpConnector);
-				this.storeSamlResponseDataInCache(response);
-			} else {
-				throw new SamlProcessingException(String.format("Unsupported SAML query type: [%s] !",
-						samlObject.getClass().getName()));
-			}
-		} catch (MessageDecodingException e) {
-			this.logger.debug("Error while extracting SAML message from request !", e);
-			throw new SamlProcessingException("Error while extracting SAML message from request !", e);
-		} catch (SecurityException e) {
-			this.logger.debug("Security problem while extracting SAML message from request !", e);
-			throw new SamlProcessingException("Security problem while extracting SAML message from request !", e);
-		} catch (ValidationException e) {
-			this.logger.debug("SAML request validation problem !", e);
-			throw new SamlProcessingException("SAML request validation problem  problem !", e);
-		} catch (DecryptionException e) {
-			this.logger.debug("Error while decrypting encrypted SAML parts !", e);
-			throw new SamlProcessingException("Error while decrypting encrypted SAML parts !", e);
-		}
-
-		return response;
-	}
+	/** Query Processor Factory. */
+	private IQueryProcessorFactory queryProcessorFactory;
 
 	@Override
-	public SamlResponseData processSaml20IncomingSingleLogoutRequest(final HttpServletRequest request,
-			final SamlBindingEnum binding) throws SamlProcessingException {
-		SamlResponseData response = null;
+	public IIncomingSaml processSaml20IncomingRequest(final HttpServletRequest request)
+			throws SamlProcessingException, UnsupportedSamlOperation {
+		IIncomingSaml incomingSaml = null;
 
-		try {
-			// Retrieve SAML Object from HTTP request
-			SAMLObject samlObject = this.extractSamlObjectFromRequest(request, binding);
-			ISaml20IdpConnector idpConnector = this.findSaml20IdpConnectorToUse(samlObject);
+		// Build the adapted query processor
+		IQueryProcessor queryProcessor = this.queryProcessorFactory.buildQueryProcessor(this, request);
 
-			Assert.notNull(idpConnector, "The IdPConnector cannot be null here !");
+		// Process the message
+		incomingSaml = queryProcessor.processIncomingSamlMessage();
 
-			this.logger.debug(String.format(
-					"Incoming SAML logout request use the IdP connector with id [%s] .",
-					idpConnector.getIdpConfig().getId()));
-
-			// Process the SAML Object
-			if (LogoutRequest.class.isAssignableFrom(samlObject.getClass())) {
-				// Process SLO Request
-				final SamlRequestData sloResponseRequest =
-						this.processSaml20SingleLogoutRequest((LogoutRequest)samlObject,
-								binding, idpConnector);
-				// Send SLO Response
-				this.sendSloResponse(binding, sloResponseRequest);
-				// TODO MBD: the method should probably not return a SamlResponseData !
-				response = new SamlResponseData();
-			} else if (LogoutResponse.class.isAssignableFrom(samlObject.getClass())) {
-				//Process SLO Response
-				response = this.processSaml20SingleLogoutResponse((LogoutResponse)samlObject, binding, idpConnector);
-			} else {
-				throw new SamlProcessingException(String.format("Unsupported SAML query type: [%s] !",
-						samlObject.getClass().getName()));
-			}
-
-		} catch (MessageDecodingException e) {
-			this.logger.debug("Error while extracting SAML message from request !", e);
-			throw new SamlProcessingException("Error while extracting SAML message from request !", e);
-		} catch (SecurityException e) {
-			this.logger.debug("Security problem while extracting SAML message from request !", e);
-			throw new SamlProcessingException("Security problem while extracting SAML message from request !", e);
-		} catch (ValidationException e) {
-			this.logger.debug("SAML request validation problem  problem !", e);
-			throw new SamlProcessingException("SAML request validation problem  problem !", e);
-		} catch (NotSignedException e) {
-			this.logger.debug("SAML Logout Response signature missing !", e);
-			throw new SamlProcessingException("SAML Logout Response signature missing !", e);
-		}
-
-		return response;
+		return incomingSaml;
 	}
 
 	@Override
@@ -260,48 +121,23 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	}
 
 	@Override
-	public String encodeSamlObject(final SamlBindingEnum binding, final SignableSAMLObject samlObject) {
-		String encodedAuthnRequest = null;
-		try {
-			switch (binding) {
-			case SAML_20_HTTP_POST:
-				encodedAuthnRequest = OpenSamlHelper.httpPostEncode(samlObject);
-				break;
-			case SAML_20_HTTP_REDIRECT:
-				encodedAuthnRequest = OpenSamlHelper.httpRedirectEncode(samlObject);
-				break;
-			}
-		} catch (UnsupportedEncodingException e) {
-			this.logger.error("Error while encoding SAML 2.0 AuthnRequest !", e);
-		} catch (IOException e) {
-			this.logger.error("Error while encoding SAML 2.0 AuthnRequest !", e);
-		}
-		Assert.notNull(encodedAuthnRequest, "Error while encoding authn request !");
-		return encodedAuthnRequest;
-	}
+	public IRequestWaitingForResponse retrieveRequestWaitingForResponse(final String inResponseToId) {
+		IRequestWaitingForResponse result = null;
 
-	@Override
-	public SamlResponseData getCachedSaml20Response(final String relayState) {
-		SamlResponseData result = null;
-		if (relayState != null) {
-			Element element = this.samlResponseDataCache.get(relayState);
-			if (element != null) {
-				result = (SamlResponseData) element.getObjectValue();
-			}
+		Assert.hasText(inResponseToId, "No inResponseToId provided !");
+		final Element element = this.samlRequestWaitingForResponseCache.get(inResponseToId);
+		if (element != null) {
+			result = (IRequestWaitingForResponse) element.getValue();
 		}
+
 		return result;
 	}
 
-	/**
-	 * Store a SAML Request Data in the cache.
-	 * 
-	 * @param requestData the Request Data to store
-	 */
 	@Override
-	public void storeSamlRequestDataInCache(final SamlRequestData requestData) {
+	public void storeRequestWaitingForResponseInCache(final IRequestWaitingForResponse requestData) {
 		Assert.notNull(requestData, "Trying to store a null request in cache !");
-		Assert.notNull(requestData.getId(), "Trying to store a request without Id in cache !");
-		this.samlRequestDataCache.put(new Element(requestData.getId(), requestData));
+		Assert.hasText(requestData.getId(), "Trying to store a request without Id in cache !");
+		this.samlRequestWaitingForResponseCache.put(new Element(requestData.getId(), requestData));
 	}
 
 	@Override
@@ -328,22 +164,17 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	}
 
 	@Override
+	public boolean logout(final String sessionIndex) {
+		this.logoutFromCas(sessionIndex);
+		return true;
+	}
+
+	@Override
 	public void afterPropertiesSet() throws Exception {
 		Assert.notNull(this.samlFacade, "The SAML 2.0 Facade wasn't injected !");
 		Assert.notNull(this.cas, "The CAS service wasn't injected !");
 		Assert.notNull(this.getSpConfig(), "No SP configuration provided for this SP processor !");
-
-		//TODO MBD: what to do with this ?
-		StorageService<String, ReplayCacheEntry> storageEngine = new MapBasedStorageService<String, ReplayCacheEntry>();
-		ReplayCache replayCache = new ReplayCache(storageEngine, 60 * 1000 * this.replayMinutes);
-		this.rule = new MessageReplayRule(replayCache);
-
-		Assert.notNull(this.samlMessageDecoders, "No SAML message decoders provided for this IdP connector !");
-		for (SamlBindingEnum binding : SamlBindingEnum.values()) {
-			Assert.notNull(this.samlMessageDecoders.get(binding),
-					String.format("No SAML message decoder provided for the binding [%s] !",
-							binding.getDescription()));
-		}
+		Assert.notNull(this.queryProcessorFactory, "No QueryProcessorFactory injected !");
 
 		// Retrieve IdP connectors and
 		// Register this SP processor in the IdP connectors
@@ -377,34 +208,82 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	}
 
 	/**
-	 * Store a SAML Response Data in the cache.
-	 * To store a response, a request need to be already present in request cache !
+	 * Check if the Response correspond to a request already present in request cache !
 	 * Remove the Request Data from request cache.
 	 * 
-	 * @param responseData the Response Data to store
+	 * @param response
+	 * @return the original request cannot be null
+	 * @throws SamlSecurityException
 	 */
-	protected void storeSamlResponseDataInCache(final SamlResponseData responseData)
-			throws SamlProcessingException {
+	protected IRequestWaitingForResponse checkInResponseToRequest(final String inResponseToId) throws SamlSecurityException {
+		IRequestWaitingForResponse request = null;
 
-		SamlRequestData authnRequestData;
+		if (StringUtils.hasText(inResponseToId)) {
+			// Get request from cache
+			Element element = this.samlRequestWaitingForResponseCache.get(inResponseToId);
+			if (element != null) {
+				request = (IRequestWaitingForResponse) element.getObjectValue();
 
-		String uniqueId = responseData.getInResponseToId();
-		Assert.notNull(uniqueId, "SAML Response cannot have a null  unique ID !");
-
-		// Get request from cache
-		Element element = this.samlRequestDataCache.get(uniqueId);
-		if (element != null) {
-			authnRequestData = (SamlRequestData) element.getObjectValue();
-		} else {
-			throw new SamlProcessingException("No Authn Request corresponding to the Authn Response found !");
+				// Clear request from cache
+				this.samlRequestWaitingForResponseCache.remove(inResponseToId);
+			}
 		}
 
-		// Clear request from cache
-		this.samlRequestDataCache.remove(uniqueId);
+		if (request == null ){
+			throw new SamlSecurityException(
+					"Response reference a Request which is not (anymore ?) in cache !");
+		}
 
-		responseData.setOriginalRequestData(authnRequestData);
+		return request;
 	}
 
+	/** Clear caches. Use it for test purpose only ! */
+	public void clearCaches() {
+		this.samlRequestWaitingForResponseCache.removeAll();
+		this.samlAuthenticationsCache.removeAll();
+	}
+
+	/**
+	 * Store a SAML Authentication in the cache by the IdP session index.
+	 * 
+	 * @param authns the collection of authentications
+	 * @throws SamlSecurityException
+	 */
+	protected void storeSamlAuthenticationsInCache(final List<IAuthentication> authns)
+			throws SamlSecurityException {
+		if (!CollectionUtils.isEmpty(authns)) {
+			for (IAuthentication auth : authns) {
+				String authKey = auth.getSessionIndex();
+				// Check auth already done
+				final Element alreadyAuthenticated = this.samlAuthenticationsCache.get(authKey);
+				if (alreadyAuthenticated != null) {
+					throw new SamlSecurityException("Attempt to replay a previous authentication !");
+				}
+
+				final Element element = new Element(authKey, auth);
+				this.samlAuthenticationsCache.put(element);
+			}
+		}
+	}
+
+	/**
+	 * Find a chached Saml Authentication.
+	 * 
+	 * @param sessionId
+	 * @return
+	 */
+	protected IAuthentication getCachedSamlAuthentications(final String sessionIndex) {
+		IAuthentication result = null;
+
+		if (StringUtils.hasText(sessionIndex)) {
+			final Element element = this.samlAuthenticationsCache.get(sessionIndex);
+			if (element != null) {
+				result = (IAuthentication) element.getObjectValue();
+			}
+		}
+
+		return result;
+	}
 
 	/**
 	 * Find the SAML 2.0 IdP Connector to use to process the SAML Object.
@@ -425,11 +304,11 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			String originalRequestId = samlResponse.getInResponseTo();
 
 			if (StringUtils.hasText(originalRequestId)) {
-				Element element = this.samlRequestDataCache.get(originalRequestId);
+				Element element = this.samlRequestWaitingForResponseCache.get(originalRequestId);
 				if (element != null) {
 					Object value = element.getValue();
 					if (value != null) {
-						SamlRequestData originalRequestData = (SamlRequestData) element.getValue();
+						IRequestWaitingForResponse originalRequestData = (IRequestWaitingForResponse) element.getValue();
 						samlConnector = originalRequestData.getIdpConnectorBuilder();
 					}
 				}
@@ -456,635 +335,19 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		return samlConnector;
 	}
 
-	@SuppressWarnings("unchecked")
-	protected SamlResponseData processSaml20AuthnResponse(final Response authnResponse,
-			final SamlBindingEnum binding, final ISaml20IdpConnector idpConnector) throws SamlProcessingException,
-			ValidationException, DecryptionException, SecurityException {
-		Assert.notNull(authnResponse, "Authn Response must be supplied !");
-		this.logger.debug("Processing a SAML 2.0 Response...");
-
-		SamlResponseData samlResponseData = new SamlResponseData();
-
-		try {
-			String messageXML = OpenSamlHelper.marshallXmlObject(authnResponse);
-			samlResponseData.setSamlResponse(messageXML);
-
-			// Logging XML Authn Response
-			if (this.logger.isDebugEnabled()) {
-				this.logger.debug(String.format("SAML Authn Response: %s", messageXML));
-			}
-		} catch (MarshallingException e) {
-			this.logger.warn("Error while marshalling SAML 2.0 Authn Response !", e);
-		}
-
-		Map<String, List<String>> attributesMap = new HashMap<String, List<String>>();
-
-		// Validate Response signature
-		boolean responseSigned = false;
-		try {
-			this.validateResponseSignatureTrust(authnResponse, idpConnector);
-			responseSigned = true;
-		} catch (NotSignedException e) {
-			// If the response signature is absent, try to check assertions signature...
-			this.logger.debug("Unable to validate Response signature trust ! We will try to validate the assertions signatures ...", e);
-		}
-
-		for (Assertion assertion : this.retrieveAllAssertions(authnResponse)) {
-			this.validateConditions(assertion);
-
-			try {
-				this.validateAssertionSignatureTrust(assertion, idpConnector);
-			} catch (NotSignedException e) {
-				this.logger.debug("Unable to validate Assertion signature trust !", e);
-
-				if (!responseSigned) {
-					// if nether response or assertion are signed => validation exception
-					throw new SecurityException("SAML Authn Response or Assertion signature missing !");
-				}
-			}
-
-			Subject subject = this.validateAndRetrieveSubject(assertion);
-			samlResponseData.setSamlSubject(subject);
-
-			String sessionIndex = this.retrieveSessionIndex(assertion);
-			samlResponseData.setSessionIndex(sessionIndex);
-
-			this.processAssertionAttributes(assertion, attributesMap);
-		}
-
-		attributesMap = MapUtils.unmodifiableMap(attributesMap);
-		final IIdpConfig config = idpConnector.getIdpConfig();
-		this.logger.info("IdP [{}] with Id: [{}] succesfully returned a SAML AuthnResponse with attributes: [{}].",
-				new Object[]{config.getIdpEntityId(), config.getId(), attributesMap});
-
-		samlResponseData.setAttributes(attributesMap);
-		samlResponseData.setId(authnResponse.getID());
-		samlResponseData.setInResponseToId(authnResponse.getInResponseTo());
-
-		this.logger.debug("SAML 2.0 Authn Response processing ended.");
-		return samlResponseData;
-	}
-
-	/**
-	 * Process a SLO Request.
-	 * 
-	 * @param request the HTTP request
-	 * @param binding the SLO Request binding
-	 * @return the SLO Response to return to the IdP
-	 * @throws SamlProcessingException
-	 */
-	protected SamlRequestData processSaml20SingleLogoutRequest(final LogoutRequest logoutRequest,
-			final SamlBindingEnum binding, final ISaml20IdpConnector idpConnector) throws SamlProcessingException {
-		Assert.notNull(logoutRequest, "SLO Request must be supplied !");
-		this.logger.debug("Processing a SAML 2.0 Single Logout Request...");
-
-		// Logout
-		this.logoutFromCas(logoutRequest.getNameID());
-
-		String originRequestId = logoutRequest.getID();
-		SamlRequestData sloResponseRequest = idpConnector.buildSaml20SingleLogoutResponse(
-				binding, originRequestId);
-
-		this.logger.debug("SAML 2.0 Logout Response processing ended.");
-		return sloResponseRequest;
-	}
-
-	/**
-	 * Process a SLO Response.
-	 * 
-	 * @param request the HTTP request
-	 * @param binding the SLO Response binding
-	 * @param idpConnector
-	 * @return the SLO Response
-	 * @throws SamlProcessingException
-	 * @throws NotSignedException
-	 * @throws ValidationException
-	 */
-	protected SamlResponseData processSaml20SingleLogoutResponse(final LogoutResponse logoutResponse,
-			final SamlBindingEnum binding, final ISaml20IdpConnector idpConnector) throws SamlProcessingException, ValidationException, NotSignedException {
-		Assert.notNull(logoutResponse, "SLO Response must be supplied !");
-		this.logger.debug("Processing a SAML 2.0 Single Logout Response...");
-
-		SamlResponseData samlResponseData = new SamlResponseData();
-
-		this.validateResponseSignatureTrust(logoutResponse, idpConnector);
-
-		// Logging XML Authn Response
-		try {
-			String messageXML = OpenSamlHelper.marshallXmlObject(logoutResponse);
-
-			samlResponseData.setSamlResponse(messageXML);
-			if (this.logger.isDebugEnabled()) {
-				this.logger.debug(String.format("SAML Logout Response: %s", messageXML));
-			}
-		} catch (MarshallingException e) {
-			this.logger.warn("Error while marshalling SAML 2.0 Logout Response !", e);
-		}
-
-		String samlId = logoutResponse.getID();
-		samlResponseData.setId(samlId);
-		samlResponseData.setInResponseToId(logoutResponse.getInResponseTo());
-
-		// No need to store a SLO Response request !
-		// this.storeSamlResponseDataInCache(samlResponseData);
-
-		this.logger.debug("SAML 2.0 Logout Response processing ended.");
-		return samlResponseData;
-	}
-
-	/**
-	 * Send the SLO Response via the URL Api.
-	 * 
-	 * @param binding the binding to use
-	 * @param sloResponseRequest the SLO Response request
-	 */
-	protected void sendSloResponse(final SamlBindingEnum binding, final SamlRequestData sloResponseRequest) {
-		URL sloUrl = null;
-		HttpURLConnection sloConnexion = null;
-
-		try {
-			switch(binding) {
-			case SAML_20_HTTP_REDIRECT:
-				String redirectUrl = sloResponseRequest.buildSamlHttpRedirectRequestUrl();
-
-				sloUrl = new URL(redirectUrl);
-				sloConnexion = (HttpURLConnection) sloUrl.openConnection();
-				sloConnexion.setReadTimeout(10000);
-				sloConnexion.connect();
-				break;
-
-			case SAML_20_HTTP_POST:
-				String sloEndpointUrl = sloResponseRequest.getEndpointUrl();
-
-				StringBuffer samlDatas = new StringBuffer(1024);
-				samlDatas.append("RelayState=");
-				samlDatas.append(sloResponseRequest.getRelayState());
-				samlDatas.append("&SAMLRequest=");
-				samlDatas.append(sloResponseRequest.getSamlRequest());
-
-				sloUrl = new URL(sloEndpointUrl);
-				sloConnexion = (HttpURLConnection) sloUrl.openConnection();
-				sloConnexion.setDoInput(true);
-
-				OutputStreamWriter writer = new OutputStreamWriter(sloConnexion.getOutputStream());
-				writer.write(samlDatas.toString());
-				writer.flush();
-				writer.close();
-
-				sloConnexion.setReadTimeout(10000);
-				sloConnexion.connect();
-				break;
-
-			default:
-				break;
-			}
-
-			if (sloConnexion != null) {
-				InputStream responseStream = sloConnexion.getInputStream();
-
-				StringWriter writer = new StringWriter();
-				IOUtils.copy(responseStream, writer, "UTF-8");
-				String response = writer.toString();
-
-				this.logger.debug(String.format("HTTP response to SLO Request sent: [%s] ", response));
-
-				int responseCode = sloConnexion.getResponseCode();
-
-				String samlResponse = sloResponseRequest.getSamlRequest();
-				String entityId = sloResponseRequest.getIdpConnectorBuilder().getIdpConfig().getIdpEntityId();
-				if (responseCode < 0) {
-					this.logger.error(String.format("Unable to send SAML 2.0 Single Logout Response [%s] to IdP [%s] !",
-							samlResponse, entityId));
-				} else if (responseCode == 200) {
-					this.logger.info(String.format("SAML 2.0 Single Logout Request correctly received by IdP [%s] !",
-							sloResponseRequest.getIdpConnectorBuilder().getIdpConfig().getIdpEntityId()));
-				} else {
-					this.logger.error(String.format(
-							"HTTP response code: [%s] ! Error while sending SAML 2.0 Single Logout Request [%s] to IdP [%s] !",
-							samlResponse, entityId));
-				}
-			}
-
-		} catch (MalformedURLException e) {
-			this.logger.error(String.format("Malformed SAML SLO request URL: [%s] !",
-					sloUrl.toExternalForm()), e);
-		} catch (IOException e) {
-			this.logger.error(String.format("Unable to send SAML SLO request URL: [%s] !",
-					sloUrl.toExternalForm()), e);
-		} finally {
-			sloConnexion.disconnect();
-		}
-	}
-
 	/**
 	 * Logout from CAS.
 	 * 
 	 * @param nameID
 	 */
-	private void logoutFromCas(final NameID nameID) {
-		if (nameID != null) {
-			String tgtId = this.samlFacade.findTgtIdBySamlNameId(nameID.getValue());
+	protected void logoutFromCas(final String sessionIndex) {
+		if (StringUtils.hasText(sessionIndex)) {
+			String tgtId = this.samlFacade.findTgtIdBySamlNameId(sessionIndex);
 
 			this.cas.destroyTicketGrantingTicket(tgtId);
 
 			this.samlFacade.removeAuthenticationInfosFromCache(tgtId);
 		}
-	}
-
-	/**
-	 * Build the SAML message context from a HttpServletRequest.
-	 * 
-	 * @param request
-	 *            the HttpServletRequest
-	 * @param binding
-	 * @return the SAML message context
-	 * @throws SecurityException
-	 *             in case of Security problem
-	 * @throws MessageDecodingException
-	 *             in case of decoding problem
-	 */
-	@SuppressWarnings("rawtypes")
-	protected MessageContext buildMessageContext(final HttpServletRequest request, final SamlBindingEnum binding)
-			throws SecurityException, MessageDecodingException {
-		Validate.notNull(request, "Request must be supplied !");
-
-		MessageContext messageContext = new BasicSAMLMessageContext();
-		messageContext.setInboundMessageTransport(new HttpServletRequestAdapter(request));
-
-		try {
-			this.getSamlMessageDecoder(binding).decode(messageContext);
-		} catch (SecurityException e) {
-			// Security problem !
-			this.logger.warn("Security error while decoding SAML Message !", e);
-		}
-
-		this.validateMessageContext(messageContext);
-
-		return messageContext;
-	}
-
-	/**
-	 * Validate the message context if MessageReplayRule was provided.
-	 * 
-	 * @param messageContext
-	 *            the message context
-	 * @throws SecurityPolicyException
-	 *             in case of rule requirements problem.
-	 */
-	protected void validateMessageContext(final MessageContext messageContext) throws SecurityPolicyException {
-		if ((this.rule != null) && (messageContext != null)) {
-			this.rule.evaluate(messageContext);
-		}
-	}
-
-	/**
-	 * Extract SAML Object from request.
-	 * @param binding
-	 * 
-	 * @param messageContext
-	 *            the message context
-	 * @return the SAML Authn Response. It can't be null !
-	 * @throws ValidationException
-	 *             in case of validation problem
-	 * @throws SecurityException
-	 * @throws MessageDecodingException
-	 */
-	protected SAMLObject extractSamlObjectFromRequest(final HttpServletRequest request, final SamlBindingEnum binding)
-			throws ValidationException, MessageDecodingException, SecurityException {
-		SAMLObject samlObject = null;
-
-		MessageContext messageContext = this.buildMessageContext(request, binding);
-
-		Validate.notNull(messageContext, "MessageContext must be supplied !");
-
-		XMLObject inboundMessage = messageContext.getInboundMessage();
-		if ((inboundMessage != null) && SAMLObject.class.isAssignableFrom(inboundMessage.getClass())) {
-			samlObject = (SAMLObject) inboundMessage;
-		} else {
-			throw new ValidationException("Unable to find a SAML Object in HTTP request !");
-		}
-
-		return samlObject;
-	}
-
-	/**
-	 * Retrieve all assertions, normal ones and encrypted ones if a private key
-	 * was provided.
-	 * 
-	 * @param samlResponse
-	 *            the saml response containing the assertions.
-	 * @return the list of all assertions.
-	 * @throws DecryptionException
-	 *             in case of decryption problem.
-	 */
-	protected List<Assertion> retrieveAllAssertions(final Response samlResponse) throws DecryptionException {
-		List<Assertion> allAssertions = new ArrayList<Assertion>();
-		if (samlResponse != null) {
-			// Normal Assertions
-			List<Assertion> normalAssertions = samlResponse.getAssertions();
-			if (!CollectionUtils.isEmpty(normalAssertions)) {
-				allAssertions.addAll(normalAssertions);
-			}
-
-			// Encrypted Assertions
-			final Decrypter decrypter = this.getDecrypter();
-			List<EncryptedAssertion> encAssertions = samlResponse.getEncryptedAssertions();
-			if ((decrypter != null) && (!CollectionUtils.isEmpty(encAssertions))) {
-				for (EncryptedAssertion encAssertion : samlResponse.getEncryptedAssertions()) {
-					Assertion assertion = decrypter.decrypt(encAssertion);
-					allAssertions.add(assertion);
-				}
-			}
-		}
-
-		return allAssertions;
-	}
-
-	/**
-	 * Add each assertion attributes and its values in an attributes map.
-	 * 
-	 * @param assertion the assertion
-	 * @param attributesMap the map to put attributes into
-	 * @throws DecryptionException
-	 * @throws SecurityException
-	 */
-	protected void processAssertionAttributes(final Assertion assertion,
-			final Map<String, List<String>> attributesMap) throws DecryptionException, SecurityException {
-		List<Attribute> attributes = this.retrieveAttributes(assertion);
-		if (!CollectionUtils.isEmpty(attributes)) {
-			for (Attribute attr : attributes) {
-				if (attr != null) {
-					List<String> values = new ArrayList<String>();
-					for (XMLObject value : attr.getAttributeValues()) {
-						if (value != null) {
-							String textContent = value.getDOM().getTextContent();
-							if (StringUtils.hasText(textContent)) {
-								values.add(textContent);
-							}
-						}
-					}
-
-					final String attrName = attr.getName();
-					if (!CollectionUtils.isEmpty(values)) {
-						List<String> attrReplaced = attributesMap.put(attrName, values);
-
-						// if attrReplaced is not null attributes name is not unique !
-						if (attrReplaced != null) {
-							throw new SecurityException(String.format(
-									"Assertion contained multiple attributes with same name: [%1$s] !", attrName));
-						}
-					}
-				}
-			}
-		}
-	}
-
-	/**
-	 * Validate the Saml2 response signature if a signature profile validator was provided.
-	 * Verify the Saml2 response signature with IdP Metadata.
-	 * 
-	 * @param response the Saml 2.0 Response to validate and verify.
-	 * @throws ValidationException
-	 * @throws NotSignedException if no signature present
-	 */
-	protected void validateAssertionSignatureTrust(final Assertion assertion,
-			final ISaml20IdpConnector idpConnector)
-					throws ValidationException, NotSignedException {
-		if (assertion != null) {
-
-			CriteriaSet criteriaSet = new CriteriaSet();
-			criteriaSet.add(new EntityIDCriteria(assertion.getIssuer().getValue()) );
-
-			this.validateSignatureTrust(assertion, criteriaSet, idpConnector);
-		}
-	}
-
-	/**
-	 * Validate the Saml2 response signature if a signature profile validator was provided.
-	 * Verify the Saml2 response signature with IdP Metadata.
-	 * 
-	 * @param response an Saml 2.0 Response to validate and verify.
-	 * @throws ValidationException
-	 * @throws NotSignedException if the response isn't signed
-	 */
-	protected void validateResponseSignatureTrust(final StatusResponseType response,
-			final ISaml20IdpConnector idpConnector) throws ValidationException, NotSignedException {
-		if (response != null) {
-
-			CriteriaSet criteriaSet = new CriteriaSet();
-			criteriaSet.add(new EntityIDCriteria(response.getIssuer().getValue()) );
-
-			this.validateSignatureTrust(response, criteriaSet, idpConnector);
-		}
-	}
-
-	/**
-	 * Validate a Saml2 signature if a signature profile validator was provided.
-	 * Verify a Saml2 signature with IdP Metadata.
-	 * 
-	 * @param response the Saml 2.0 Response to validate and verify.
-	 * @throws ValidationException
-	 * @throws NotSignedException if no signature present
-	 */
-	protected void validateSignatureTrust(final SignableSAMLObject signableObject, final CriteriaSet criteriaSet,
-			final ISaml20IdpConnector idpConnector) throws ValidationException, NotSignedException {
-		if (signableObject != null) {
-			Signature signature = signableObject.getSignature();
-			if ((signature == null) || signature.isNil()) {
-				throw new NotSignedException("The signature is missing !");
-			}
-
-			if (this.signatureProfileValidator != null) {
-				this.signatureProfileValidator.validate(signature);
-			}
-
-			// On test mode only if security keys are provided
-			criteriaSet.add(new MetadataCriteria(IDPSSODescriptor.DEFAULT_ELEMENT_NAME, SAMLConstants.SAML20P_NS));
-			criteriaSet.add(new UsageCriteria(UsageType.SIGNING));
-
-			try {
-				SignatureTrustEngine signatureTrustEngine = idpConnector.getIdpConfig().getSignatureTrustEngine();
-				if (!signatureTrustEngine.validate(signature, criteriaSet)) {
-					throw new ValidationException("Signature was either invalid or signing key could not be established as trusted !");
-				}
-			} catch (SecurityException e) {
-				throw new ValidationException("Error while validating the security token !", e);
-			}
-
-		}
-
-	}
-
-	/**
-	 * Validate an assertion subject.
-	 * 
-	 * @param assertion
-	 *            the assertion containing the subject
-	 * @return the validated subject. It can be null !
-	 * @throws ValidationException
-	 *             in case of validation problem
-	 * @throws DecryptionException
-	 * @throws SecurityException
-	 */
-	protected Subject validateAndRetrieveSubject(final Assertion assertion)
-			throws ValidationException, DecryptionException, SecurityException {
-		Subject subject = null;
-		if (assertion != null) {
-			subject = assertion.getSubject();
-			List<SubjectConfirmation> subjectConfirmations = null;
-
-			SubjectConfirmationData scData = null;
-
-			if (subject != null) {
-				// Check subject confirmations
-				subjectConfirmations = subject.getSubjectConfirmations();
-				if (!CollectionUtils.isEmpty(subjectConfirmations)) {
-					for (SubjectConfirmation subjectConfirmation : subjectConfirmations) {
-						if (subjectConfirmation != null) {
-							scData = subjectConfirmation.getSubjectConfirmationData();
-							this.validateTimes(scData.getNotBefore(), scData.getNotOnOrAfter());
-						}
-					}
-				}
-
-				// Manage Encrypted ID
-				final Decrypter decrypter = this.getDecrypter();
-				final EncryptedID encryptedId = subject.getEncryptedID();
-				if ((decrypter != null) && (encryptedId != null)) {
-					SAMLObject id = decrypter.decrypt(encryptedId);
-					if (NameID.class.isAssignableFrom(id.getClass())) {
-						subject.setNameID((NameID)id);
-					} else if (BaseID.class.isAssignableFrom(id.getClass())) {
-						subject.setBaseID((BaseID)id);
-					} else {
-						throw new SecurityException("Encrypted id wasn't of type NameID nor BaseID !");
-					}
-				}
-			}
-		}
-
-		return subject;
-	}
-
-	/**
-	 * Retrieve the session index for an assertion.
-	 * 
-	 * @param assertionsession index
-	 */
-	protected String retrieveSessionIndex(final Assertion assertion) {
-		String sessionIndex = null;
-
-		if (assertion != null) {
-			List<AuthnStatement> authnStatments = assertion.getAuthnStatements();
-
-			for (AuthnStatement authnStatment : authnStatments) {
-				sessionIndex = authnStatment.getSessionIndex();
-				if (StringUtils.hasText(sessionIndex)) {
-					break;
-				}
-
-			}
-		}
-
-		return sessionIndex;
-	}
-
-	/**
-	 * Retrieve assertion attributes.
-	 * 
-	 * @param assertion
-	 *            the assertion containing the attributes
-	 * @return the list of all attributes.
-	 * @throws DecryptionException
-	 */
-	protected List<Attribute> retrieveAttributes(final Assertion assertion) throws DecryptionException {
-		List<Attribute> attributes = new ArrayList<Attribute>();
-
-		if (assertion != null) {
-			List<AttributeStatement> statements = assertion.getAttributeStatements();
-			if (!CollectionUtils.isEmpty(statements)) {
-				for (AttributeStatement statement : statements) {
-					// Get all attributes from statement
-					List<Attribute> attrs = statement.getAttributes();
-					if (!CollectionUtils.isEmpty(attrs)) {
-						attributes.addAll(attrs);
-					}
-
-					// Decrypt and add all encrypted attributes from statement
-					final Decrypter decrypter = this.getDecrypter();
-					List<EncryptedAttribute> encrAttrs = statement.getEncryptedAttributes();
-					if ((decrypter != null) && !CollectionUtils.isEmpty(encrAttrs)) {
-						for (EncryptedAttribute encAttr : encrAttrs) {
-							Attribute attr = decrypter.decrypt(encAttr);
-							attributes.add(attr);
-						}
-					}
-				}
-			}
-		}
-
-		this.logger.debug(String.format("%s attribute(s) found in SAML assertion.", attributes.size()));
-
-		return attributes;
-	}
-
-	/**
-	 * Validate assertion conditions.
-	 * 
-	 * @param assertion
-	 *            the assertion to validate
-	 * @throws ValidationException
-	 *             in case of validation problem
-	 */
-	protected void validateConditions(final Assertion assertion) throws ValidationException {
-		if (assertion != null) {
-			Conditions conditions = assertion.getConditions();
-			this.validateTimes(conditions.getNotBefore(), conditions.getNotOnOrAfter());
-		}
-	}
-
-	/**
-	 * Validate times notBefore and notOnOrAfter conditions.
-	 * 
-	 * @param notBefore
-	 *            notBefore condition
-	 * @param notOnOrAfter
-	 *            notOnOrAfter condition
-	 * @throws ValidationException
-	 *             in case of validation problem.
-	 */
-	protected void validateTimes(final DateTime notBefore, final DateTime notOnOrAfter) throws ValidationException {
-		Instant serverInstant = new Instant();
-
-		if (notBefore != null) {
-			// Instant with skew
-			Instant notBeforeInstant = notBefore.toInstant().withDurationAdded(this.clockSkewSeconds * 1000, -1);
-
-			if (serverInstant.isBefore(notBeforeInstant)) {
-				throw new ValidationException("SAML 2.0 Message is outdated (too early) !");
-			}
-		}
-
-		if ((notOnOrAfter != null)) {
-			// Instant with skew
-			Instant notOrOnAfterInstant = notOnOrAfter.toInstant().withDurationAdded(
-					(this.clockSkewSeconds * 1000) - 1, 1);
-
-			if (serverInstant.isAfter(notOrOnAfterInstant)) {
-				throw new ValidationException("SAML 2.0 Message is outdated (too late) !");
-			}
-		}
-
-	}
-
-	/**
-	 * Retrieve the SAML message decoder attached to the binding.
-	 * 
-	 * @param binding the binding
-	 * @return the right SAML message decoder
-	 */
-	protected SAMLMessageDecoder getSamlMessageDecoder(final SamlBindingEnum binding) {
-		return this.samlMessageDecoders.get(binding);
 	}
 
 	/**
@@ -1094,24 +357,24 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	 * @throws CacheException
 	 */
 	protected void initCaches() throws CacheException, IOException {
-		if (this.samlRequestDataCache == null) {
+		if (this.samlRequestWaitingForResponseCache == null) {
 			EhCacheFactoryBean requestCacheFactory = new EhCacheFactoryBean();
-			String requestCacheName = OpenSaml20SpProcessor.SAML2_REQUEST_DATA_CACHE_NAME;
+			String requestCacheName = OpenSaml20SpProcessor.SAML2_RWFR_CACHE_NAME;
 			requestCacheFactory.setCacheName(requestCacheName);
 			requestCacheFactory.afterPropertiesSet();
-			this.samlRequestDataCache = requestCacheFactory.getObject();
+			this.samlRequestWaitingForResponseCache = requestCacheFactory.getObject();
 		}
 
-		if (this.samlResponseDataCache == null) {
+		if (this.samlAuthenticationsCache == null) {
 			EhCacheFactoryBean responseCacheFactory = new EhCacheFactoryBean();
-			String responseCacheName = OpenSaml20SpProcessor.SAML2_RESPONSE_DATA_CACHE_NAME;
+			String responseCacheName = OpenSaml20SpProcessor.SAML2_AUTHN_CACHE_NAME;
 			responseCacheFactory.setCacheName(responseCacheName);
 			responseCacheFactory.afterPropertiesSet();
-			this.samlResponseDataCache = responseCacheFactory.getObject();
+			this.samlAuthenticationsCache = responseCacheFactory.getObject();
 		}
 
-		this.samlRequestDataCache.bootstrap();
-		this.samlResponseDataCache.bootstrap();
+		this.samlRequestWaitingForResponseCache.bootstrap();
+		this.samlAuthenticationsCache.bootstrap();
 	}
 
 	public void setSpConfig(final ISpConfig spConfig) {
@@ -1160,60 +423,20 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		return signature;
 	}
 
-	public Map<SamlBindingEnum, SAMLMessageDecoder> getSamlMessageDecoders() {
-		return this.samlMessageDecoders;
-	}
-
-	public void setSamlMessageDecoders(final Map<SamlBindingEnum, SAMLMessageDecoder> samlMessageDecoders) {
-		this.samlMessageDecoders = samlMessageDecoders;
-	}
-
-	public SAMLSignatureProfileValidator getSignatureProfileValidator() {
-		return this.signatureProfileValidator;
-	}
-
-	public void setSignatureProfileValidator(final SAMLSignatureProfileValidator signatureProfileValidator) {
-		this.signatureProfileValidator = signatureProfileValidator;
-	}
-
-	public MessageReplayRule getRule() {
-		return this.rule;
-	}
-
-	public void setRule(final MessageReplayRule rule) {
-		this.rule = rule;
-	}
-
-	public int getReplayMinutes() {
-		return this.replayMinutes;
-	}
-
-	public void setReplayMinutes(final int replayMinutes) {
-		this.replayMinutes = replayMinutes;
-	}
-
-	public int getClockSkewSeconds() {
-		return this.clockSkewSeconds;
-	}
-
-	public void setClockSkewSeconds(final int clockSkewSeconds) {
-		this.clockSkewSeconds = clockSkewSeconds;
-	}
-
 	public Ehcache getSamlRequestDataCache() {
-		return this.samlRequestDataCache;
+		return this.samlRequestWaitingForResponseCache;
 	}
 
 	public void setSamlRequestDataCache(final Ehcache samlRequestDataCache) {
-		this.samlRequestDataCache = samlRequestDataCache;
+		this.samlRequestWaitingForResponseCache = samlRequestDataCache;
 	}
 
 	public Ehcache getSamlResponseDataCache() {
-		return this.samlResponseDataCache;
+		return this.samlAuthenticationsCache;
 	}
 
 	public void setSamlResponseDataCache(final Ehcache samlResponseDataCache) {
-		this.samlResponseDataCache = samlResponseDataCache;
+		this.samlAuthenticationsCache = samlResponseDataCache;
 	}
 
 	public Collection<ISaml20IdpConnector> getIdpConnectors() {
@@ -1238,6 +461,14 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	public void setCas(final CentralAuthenticationService cas) {
 		this.cas = cas;
+	}
+
+	public IQueryProcessorFactory getQueryProcessorFactory() {
+		return this.queryProcessorFactory;
+	}
+
+	public void setQueryProcessorFactory(final IQueryProcessorFactory queryProcessorFactory) {
+		this.queryProcessorFactory = queryProcessorFactory;
 	}
 
 }

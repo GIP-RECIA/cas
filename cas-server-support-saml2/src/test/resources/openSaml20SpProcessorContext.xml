@@ -8,8 +8,10 @@
 		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
 		http://www.mockito.org/spring/mockito classpath:spring/mockito.xsd">
     <description>
-    	Configuration for the OpenSaml SAML 2.0 Processos.
+    	Configuration for signing.
     </description>
+	
+	<import resource="classpath:openSaml2QueryProcessorFactoryContext.xml"/>
 	
 	<!-- Service Provider config -->
 	<bean id="spConfig" class="org.esco.sso.security.impl.CasSpConfig">
@@ -30,8 +32,6 @@
 	<bean id="spProcessor"
 		class="org.esco.sso.security.saml.opensaml.OpenSaml20SpProcessor">
 		<property name="spConfig" ref="spConfig" />
-		<property name="clockSkewSeconds" value="60" />
-		<property name="samlMessageDecoders" ref="samlMessageDecoders" />
 
 		<property name="idpConnectors">
 			<list>
@@ -39,11 +39,13 @@
 			</list>
 		</property>
 		
+		<property name="queryProcessorFactory" ref="queryProcessorFactory" />
+		
 		<!-- Mocks -->
 		<property name="cas" ref="cas" />
 		<property name="samlFacade" ref="samlFacade" />
 	</bean>
-
+	
 	<bean id="idpConfig" class="org.esco.sso.security.impl.BasicIdpConfig">
 		<property name="id" value="testIdpConfig" />
 		<property name="description" value="idp.test" />
@@ -63,58 +65,8 @@
 		<property name="idpConfig" ref="idpConfig" />
 	</bean>
 
-	<util:map id="samlMessageDecoders">
-		<entry key="SAML_20_HTTP_POST">
-			<bean class="org.opensaml.saml2.binding.decoding.HTTPPostDecoder" />
-		</entry>
-		<entry key="SAML_20_HTTP_REDIRECT">
-			<bean
-				class="org.opensaml.saml2.binding.decoding.HTTPRedirectDeflateDecoder" />
-		</entry>
-	</util:map>
-	
 	<!-- Mocked beans -->
 	<mockito:mock id="cas" class="org.jasig.cas.CentralAuthenticationService" />
 	<mockito:mock id="samlFacade" class="org.esco.cas.ISaml20Facade" />
-	
-	<bean id="spKey" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/keys/sp_key.der" />
-	</bean>
-	
-	<bean id="idpKey" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/keys/idp_key.der" />
-	</bean>
-	
-	<bean id="spMetadata" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/metadatas/sp_metadata.xml" />
-	</bean>	
-
-	<bean id="idpMetadata" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/metadatas/idp_metadata.xml" />
-	</bean>	
-	
-	<bean id="saml20AuthnRequest" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/requests/authnRequest.xml" />
-	</bean>
-	
-	<bean id="responseSimpleSigned" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/requests/response_simple_signed.xml" />
-	</bean>
-	
-	<bean id="responseFullSigned" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/requests/response_full_signed.xml" />
-	</bean>
-	
-	<bean id="responseAttacked1" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/requests/response_attacked1.xml" />
-	</bean>
-	
-	<bean id="responseAttacked2" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/requests/response_attacked2.xml" />
-	</bean>
-	
-	<bean id="saml20Assertion" class="org.springframework.core.io.ClassPathResource">
-		<constructor-arg type="String" value="saml/requests/assertion.xml" />
-	</bean>
 	
 </beans>

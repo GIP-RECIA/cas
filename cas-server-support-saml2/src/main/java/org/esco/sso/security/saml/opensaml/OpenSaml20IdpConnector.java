@@ -3,28 +3,34 @@
  */
 package org.esco.sso.security.saml.opensaml;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.esco.cas.ISaml20Facade;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.ISpConfig;
-import org.esco.sso.security.saml.BasicSamlDataAdaptor;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.ISaml20SpProcessor;
 import org.esco.sso.security.saml.ISamlDataAdaptor;
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlBuildingException;
-import org.esco.sso.security.saml.SamlRequestData;
+import org.esco.sso.security.saml.exception.SamlBuildingException;
+import org.esco.sso.security.saml.impl.BasicSamlDataAdaptor;
+import org.esco.sso.security.saml.om.IOutgoingSaml;
+import org.esco.sso.security.saml.om.IRequestWaitingForResponse;
+import org.esco.sso.security.saml.om.impl.SamlOutgoingMessage;
+import org.esco.sso.security.saml.query.IQuery;
+import org.esco.sso.security.saml.query.impl.QueryAuthnRequest;
+import org.esco.sso.security.saml.query.impl.QuerySloRequest;
+import org.esco.sso.security.saml.query.impl.QuerySloResponse;
 import org.joda.time.DateTime;
 import org.opensaml.DefaultBootstrap;
+import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.BaseID;
 import org.opensaml.saml2.core.Conditions;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
@@ -34,8 +40,6 @@ import org.opensaml.saml2.core.NameIDPolicy;
 import org.opensaml.saml2.core.RequestAbstractType;
 import org.opensaml.saml2.core.RequestedAuthnContext;
 import org.opensaml.saml2.core.SessionIndex;
-import org.opensaml.saml2.core.StatusResponseType;
-import org.opensaml.saml2.core.Subject;
 import org.opensaml.saml2.core.impl.AuthnContextClassRefBuilder;
 import org.opensaml.saml2.core.impl.AuthnRequestBuilder;
 import org.opensaml.saml2.core.impl.ConditionsBuilder;
@@ -47,6 +51,9 @@ import org.opensaml.saml2.core.impl.NameIDPolicyBuilder;
 import org.opensaml.saml2.core.impl.RequestedAuthnContextBuilder;
 import org.opensaml.saml2.core.impl.SessionIndexBuilder;
 import org.opensaml.saml2.core.impl.SubjectBuilder;
+import org.opensaml.xml.io.MarshallingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -64,7 +71,7 @@ import org.springframework.util.StringUtils;
 public class OpenSaml20IdpConnector implements ISaml20IdpConnector, InitializingBean {
 
 	/** Logger. */
-	private final Log logger = LogFactory.getLog(OpenSaml20IdpConnector.class);
+	private final Logger logger = LoggerFactory.getLogger(OpenSaml20IdpConnector.class);
 
 	/** This IdP configuration. */
 	private IIdpConfig idpConfig;
@@ -95,27 +102,28 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 	private SessionIndexBuilder sessionIndexBuilder = new SessionIndexBuilder();
 
 	@Override
-	public SamlRequestData buildSaml20AuthnRequest(final HttpServletRequest request,
-			final SamlBindingEnum binding) {
+	@SuppressWarnings("unchecked")
+	public IOutgoingSaml buildSaml20AuthnRequest(final HttpServletRequest request,
+			final SamlBindingEnum binding) throws SamlBuildingException {
 		this.logger.debug("Building new SAML 2.0 Authentication Request ...");
 
-		AuthnRequest authnRequest = this.buildAuthnRequest(binding);
+		final AuthnRequest authnRequest = this.buildAuthnRequest(binding);
 
-		SamlRequestData samlAuthRequestData = this.prepareNewSamlRequest(authnRequest,
-				request, binding);
+		final IOutgoingSaml outgoingSaml;
+		try {
+			final QueryAuthnRequest samlQuery = this.buildQueryAuthnRequest(request.getParameterMap());
+			outgoingSaml = this.buildSamlOutgoingRequest(samlQuery, authnRequest, binding);
+			this.getSaml20SpProcessor().storeRequestWaitingForResponseInCache(samlQuery);
 
-		ISaml20SpProcessor spProc = this.getSaml20SpProcessor();
-		String encodedAuthnRequest = spProc.encodeSamlObject(binding, authnRequest);
-		samlAuthRequestData.setSamlRequest(encodedAuthnRequest);
-		samlAuthRequestData.setEndpointUrl(this.idpConfig.getIdpSsoEndpointUrl(binding));
+		} catch (MarshallingException e) {
+			throw new SamlBuildingException("Unable to build SAML 2.0 AuthnRequest !", e);
+		}
 
-		this.getSaml20SpProcessor().storeSamlRequestDataInCache(samlAuthRequestData);
-
-		return samlAuthRequestData;
+		return outgoingSaml;
 	}
 
 	@Override
-	public SamlRequestData buildSaml20SingleLogoutRequest(final HttpServletRequest request,
+	public IOutgoingSaml buildSaml20SingleLogoutRequest(final HttpServletRequest request,
 			final SamlBindingEnum binding) throws SamlBuildingException {
 		this.logger.debug("Building new SAML 2.0 Single Logout Request ...");
 
@@ -127,37 +135,38 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		SamlAuthInfo authInfos = samlFacade.retrieveAuthenticationInfosFromCache(tgtId);
 		Assert.notNull(authInfos, "SAML auth informations cannot be null here !");
 
-		LogoutRequest logoutRequest = this.buildLogoutRequest(binding, authInfos);
-		SamlRequestData samlLogoutRequestData = this.prepareNewSamlRequest(logoutRequest,
-				request, binding);
+		final LogoutRequest logoutRequest = this.buildLogoutRequest(binding, authInfos);
 
-		String encodedLogoutRequest = spProc.encodeSamlObject(binding, logoutRequest);
-		samlLogoutRequestData.setSamlRequest(encodedLogoutRequest);
-		samlLogoutRequestData.setEndpointUrl(this.idpConfig.getIdpSloEndpointUrl(binding));
+		final IOutgoingSaml outgoingSaml;
+		try {
+			final QuerySloRequest samlQuery = this.buildQuerySloRequest();
+			outgoingSaml = this.buildSamlOutgoingRequest(samlQuery, logoutRequest, binding);
+			this.getSaml20SpProcessor().storeRequestWaitingForResponseInCache(samlQuery);
 
-		this.getSaml20SpProcessor().storeSamlRequestDataInCache(samlLogoutRequestData);
+		} catch (MarshallingException e) {
+			throw new SamlBuildingException("Unable to build SAML 2.0 SLO Request !", e);
+		}
 
-		return samlLogoutRequestData;
+		return outgoingSaml;
 	}
 
 	@Override
-	public SamlRequestData buildSaml20SingleLogoutResponse(final SamlBindingEnum binding,
-			final String originRequestId) {
+	public IOutgoingSaml buildSaml20SingleLogoutResponse(final SamlBindingEnum binding,
+			final String originRequestId, final String relayState) throws SamlBuildingException {
 		this.logger.debug("Building new SAML 2.0 Single Logout Response ...");
 
 		LogoutResponse logoutResponse = this.buildLogoutResponse(binding);
-		SamlRequestData samlLogoutRequestData = this.prepareNewSamlResponse(logoutResponse,
-				binding, originRequestId);
 
-		ISaml20SpProcessor spProc = this.getSaml20SpProcessor();
-		String encodedLogoutResponse = spProc.encodeSamlObject(binding, logoutResponse);
-		samlLogoutRequestData.setSamlRequest(encodedLogoutResponse);
-		samlLogoutRequestData.setEndpointUrl(this.idpConfig.getIdpSloEndpointUrl(binding));
+		final IOutgoingSaml outgoingSaml;
+		try {
+			final IQuery samlQuery = this.buildQuerySloResponse(originRequestId);
+			outgoingSaml = this.buildSamlOutgoingMessage(samlQuery, logoutResponse, binding, relayState);
 
-		// No need to store a SLO Response request !
-		//this.getSaml20SpProcessor().storeSamlRequestDataInCache(samlLogoutRequestData);
+		} catch (MarshallingException e) {
+			throw new SamlBuildingException("Unable to build SAML 2.0 SLO Response !", e);
+		}
 
-		return samlLogoutRequestData;
+		return outgoingSaml;
 	}
 
 	@Override
@@ -172,84 +181,111 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 	}
 
 	/**
-	 * Prepare a new SAML 2.0 Request to fit the CAS HTTP Request.
+	 * Prepare a new SAML 2.0 outgoing request to send to IdP with a new generated relayState.
 	 * 
-	 * @param newRequest the new SAML 2.0 request
-	 * @param request the HTTP request
-	 * @param binding the binding for the SAML 2.0 request
-	 * @return the builded SAML Request Data
+	 * @param samlQuery SAML query object
+	 * @param request the opensaml object to marshall
+	 * @param binding the binding to use
+	 * @param relayState
+	 * @return samlOutgoingMessage the outgoing message to send
+	 * @throws MarshallingException
 	 */
-	@SuppressWarnings("unchecked")
-	protected SamlRequestData prepareNewSamlRequest(final RequestAbstractType newRequest, final HttpServletRequest request,
-			final SamlBindingEnum binding) {
-		SamlRequestData samlRequestData = this.buildSamlRequestData();
+	protected SamlOutgoingMessage buildSamlOutgoingRequest(final IRequestWaitingForResponse samlQuery,
+			final RequestAbstractType request, final SamlBindingEnum binding)
+					throws MarshallingException {
+		request.setID(samlQuery.getId());
 
-		Assert.notNull(newRequest, "No SAML Request provided !");
+		final String relayState = OpenSamlHelper.generateRelayState(
+				this.getIdpConfig().getId(), binding);
+
+		return this.buildSamlOutgoingMessage(samlQuery, request, binding, relayState);
+	}
+
+	/**
+	 * Prepare a new SAML 2.0 message to send to IdP.
+	 * 
+	 * @param samlObject the opensaml object to marshall
+	 * @param binding the binding to use
+	 * @param relayState
+	 * @return samlOutgoingMessage the outgoing message to send
+	 * @throws MarshallingException
+	 */
+	protected SamlOutgoingMessage buildSamlOutgoingMessage(final IQuery samlQuery,
+			final SAMLObject samlObject, final SamlBindingEnum binding, final String relayState)
+					throws MarshallingException {
+		Assert.notNull(samlQuery, "No SAML Query provided !");
+		Assert.notNull(samlObject, "No OpenSaml object provided !");
 		Assert.notNull(binding, "No binding provided !");
 
-		samlRequestData.setParametersMap(request.getParameterMap());
+		final SamlOutgoingMessage samlOutgoingMessage = new SamlOutgoingMessage(this.dataAdaptor);
 
-		// Generate ID
-		String randId = OpenSamlHelper.generateRandomHexString(42);
-		samlRequestData.setId(randId);
-		newRequest.setID(randId);
-		if (this.logger.isDebugEnabled()) {
-			this.logger.debug(String.format("Random ID: %s", randId));
-		}
+		// SAML Query
+		samlOutgoingMessage.setSamlQuery(samlQuery);
 
 		// Relay State
-		String relayState = OpenSamlHelper.generateRelayState(0, binding);
-		samlRequestData.setRelayState(relayState);
+		samlOutgoingMessage.setRelayState(relayState);
 		if (this.logger.isDebugEnabled()) {
 			this.logger.debug(String.format("Random RelayState: %s", relayState));
 		}
 
-		return samlRequestData;
+		// Xml Message
+		String xmlLogoutResponse = OpenSamlHelper.marshallXmlObject(samlObject);
+		samlOutgoingMessage.setSamlMessage(xmlLogoutResponse);
+		samlOutgoingMessage.setEndpointUrl(this.idpConfig.getIdpSloEndpointUrl(binding));
+
+		return samlOutgoingMessage;
 	}
 
 	/**
-	 * Prepare a new SAML 2.0 Request to fit the CAS HTTP Request.
+	 * Build a SAML Authn Request query.
 	 * 
-	 * @param newRequest the new SAML 2.0 request
-	 * @param binding the binding for the SAML 2.0 request
-	 * @param originRequestId the original request Id
-	 * @return the builded SAML Request Data
+	 * @param parametersMap
+	 * @return
 	 */
-	protected SamlRequestData prepareNewSamlResponse(final StatusResponseType newResponse,
-			final SamlBindingEnum binding, final String originRequestId) {
-		SamlRequestData samlRequestData = this.buildSamlRequestData();
+	protected QueryAuthnRequest buildQueryAuthnRequest(final Map<String, String[]> parametersMap) {
+		final String generatedUniqueId = this.generateUniqueQueryId();
+		final QueryAuthnRequest query = new QueryAuthnRequest(generatedUniqueId, this, parametersMap);
 
-		Assert.notNull(newResponse, "No SAML Response provided !");
-		Assert.notNull(binding, "No binding provided !");
+		return query;
+	}
 
-		// Generate ID
+	/**
+	 * Build a SAML SLO Request query.
+	 * 
+	 * @return
+	 */
+	protected QuerySloRequest buildQuerySloRequest() {
+		final String generatedUniqueId = this.generateUniqueQueryId();
+		final QuerySloRequest query = new QuerySloRequest(generatedUniqueId,this);
+
+		return query;
+	}
+
+	/**
+	 * Build SAML SLO Response query.
+	 * 
+	 * @param inResponseToId
+	 * @return
+	 */
+	protected QuerySloResponse buildQuerySloResponse(final String inResponseToId) {
+		final String generatedUniqueId = this.generateUniqueQueryId();
+		final QuerySloResponse query = new QuerySloResponse(generatedUniqueId);
+		query.setInResponseToId(inResponseToId);
+
+		return query;
+	}
+
+	/**
+	 * Generate a unique ID for a SAML query.
+	 * 
+	 * @return the unique ID
+	 */
+	protected String generateUniqueQueryId() {
 		String randId = OpenSamlHelper.generateRandomHexString(42);
-		samlRequestData.setId(randId);
-		newResponse.setID(randId);
-		newResponse.setInResponseTo(originRequestId);
-		if (this.logger.isDebugEnabled()) {
-			this.logger.debug(String.format("Random ID: %s", randId));
-		}
 
-		// Relay State
-		String relayState = OpenSamlHelper.generateRelayState(0, binding);
-		samlRequestData.setRelayState(relayState);
-		if (this.logger.isDebugEnabled()) {
-			this.logger.debug(String.format("Random RelayState: %s", relayState));
-		}
+		this.logger.debug("Random ID: {}", randId);
 
-		return samlRequestData;
-	}
-
-	/**
-	 * Build a SAML Request Data object.
-	 * 
-	 * @return the SAML Request Data
-	 */
-	protected SamlRequestData buildSamlRequestData() {
-		SamlRequestData requestData = new SamlRequestData(this, this.dataAdaptor);
-
-		return requestData;
+		return randId;
 	}
 
 	/**
@@ -335,27 +371,16 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		logoutRequest.setVersion(SAMLVersion.VERSION_20);
 		logoutRequest.setNotOnOrAfter(this.buildNotOnOrAfterTime(issueInstant));
 
-		Subject subject = authInfos.getIdpSubject();
-		if (subject == null) {
+		String subjectId = authInfos.getIdpSubject();
+		if (!StringUtils.hasText(subjectId)) {
 			// We don't know the subject so we cannot build a logout request
 			throw new SamlBuildingException("No SAML 2.0 Subject can be found to build the Single Logout Request !");
 		}
-		Assert.notNull(subject, "SAML Subject cannot be null here !");
 
-		NameID nameId = subject.getNameID();
-		if (nameId != null) {
-			NameIDBuilder builder = new NameIDBuilder();
-			NameID newNameId = builder.buildObject(NameID.DEFAULT_ELEMENT_NAME);
-			newNameId.setFormat(nameId.getFormat());
-			newNameId.setValue(nameId.getValue());
-			newNameId.setNameQualifier(nameId.getNameQualifier());
-			logoutRequest.setNameID(newNameId);
-		}
-		BaseID baseId = subject.getBaseID();
-		if (baseId != null) {
-			baseId.detach();
-			logoutRequest.setBaseID(baseId);
-		}
+		NameIDBuilder builder = new NameIDBuilder();
+		NameID newNameId = builder.buildObject(NameID.DEFAULT_ELEMENT_NAME);
+		newNameId.setValue(subjectId);
+		logoutRequest.setNameID(newNameId);
 
 		String sessionIndex = authInfos.getSessionIndex();
 		if (StringUtils.hasText(sessionIndex)) {

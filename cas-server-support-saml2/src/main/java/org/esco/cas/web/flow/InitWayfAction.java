@@ -10,7 +10,7 @@ import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.esco.sso.security.saml.SamlHelper;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;

@@ -12,7 +12,8 @@ import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.IWayfConfig;
 import org.esco.sso.security.impl.CasIdpConfig;
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlRequestData;
+import org.esco.sso.security.saml.exception.SamlBuildingException;
+import org.esco.sso.security.saml.om.IOutgoingSaml;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -64,6 +65,7 @@ public class WayfRedirectionAction extends AbstractAction implements Initializin
 			}
 		} catch (Exception e) {
 			WayfRedirectionAction.LOGGER.error("Error while resolving the IdP Config or building the SAML Request !", e);
+			throw e;
 		}
 
 		if (event == null) {
@@ -80,13 +82,15 @@ public class WayfRedirectionAction extends AbstractAction implements Initializin
 	 * @param context the webflow request context
 	 * @param idpConfig the IdP config
 	 * @return the redirect event
+	 * @throws SamlBuildingException
 	 */
-	protected Event buildHttpPostRequest(final RequestContext context, final IIdpConfig idpConfig) {
-		SamlRequestData authnHttpPostRequest = idpConfig
+	protected Event buildHttpPostRequest(final RequestContext context, final IIdpConfig idpConfig)
+			throws SamlBuildingException {
+		IOutgoingSaml authnHttpPostRequest = idpConfig
 				.getSamlAuthnRequest(SamlBindingEnum.SAML_20_HTTP_POST);
 
 		context.getFlowScope().put("authnRequestData", authnHttpPostRequest);
-		Collection<Entry<String, String>> params = authnHttpPostRequest.buildSamlHttpPostRequestParams();
+		Collection<Entry<String, String>> params = authnHttpPostRequest.getHttpPostBindingParams();
 		context.getFlowScope().put("paramEntries", params);
 
 		Event event = this.result(WayfRedirectionAction.SAML_POST_EVENT_ID);
@@ -100,12 +104,14 @@ public class WayfRedirectionAction extends AbstractAction implements Initializin
 	 * @param context the webflow request context
 	 * @param idpConfig the IdP config
 	 * @return the redirect event
+	 * @throws SamlBuildingException
 	 */
-	protected Event buildHttpRedirectRequest(final RequestContext context, final IIdpConfig idpConfig) {
-		SamlRequestData authnHttpRedirectRequest = idpConfig
+	protected Event buildHttpRedirectRequest(final RequestContext context, final IIdpConfig idpConfig)
+			throws SamlBuildingException {
+		IOutgoingSaml authnHttpRedirectRequest = idpConfig
 				.getSamlAuthnRequest(SamlBindingEnum.SAML_20_HTTP_REDIRECT);
 
-		String samlHttpRedirectRequest = authnHttpRedirectRequest.buildSamlHttpRedirectRequestUrl();
+		final String samlHttpRedirectRequest = authnHttpRedirectRequest.getHttpRedirectBindingUrl();
 		context.getFlowScope().put("urlToRedirect", samlHttpRedirectRequest);
 		Event event = this.result(WayfRedirectionAction.SAML_REDIRECT_EVENT_ID);
 		return event;

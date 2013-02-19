@@ -9,8 +9,7 @@ import java.util.Map;
 
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.IWayfConfig;
-import org.esco.sso.security.saml.SamlHelper;
-import org.esco.sso.security.saml.opensaml.OpenSamlHelper;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
@@ -31,12 +30,6 @@ public class WayfConfig implements IWayfConfig, InitializingBean {
 
 	/** IdP id parameter key in HTTP request. */
 	private String idpIdParamKey;
-
-	@Override
-	public IIdpConfig findIdpConfigByRelayState(final String relayState) {
-		final String idpConfigId = OpenSamlHelper.extractIdpConfigIdFromRelayState(relayState);
-		return this.idpConfigs.get(idpConfigId);
-	}
 
 	@Override
 	public IIdpConfig findIdpConfigById(final String id) {

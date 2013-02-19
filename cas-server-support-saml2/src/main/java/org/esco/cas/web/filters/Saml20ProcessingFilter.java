@@ -16,7 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.esco.sso.security.saml.SamlHelper;
+import org.esco.sso.security.saml.util.SamlHelper;
 
 /**
  * Filter which process SAML
@@ -51,7 +51,7 @@ public class Saml20ProcessingFilter implements Filter {
 					RequestDispatcher requestDispatcher=chainingRequest.getRequestDispatcher("/login");
 					requestDispatcher.forward(chainingRequest, response);
 					return;
-				} catch (Exception e) {
+				} catch (Throwable e) {
 					Saml20ProcessingFilter.LOGGER.error("Error while processing SAML 2.0 incoming request !", e);
 				}
 			}

@@ -7,7 +7,8 @@ import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.IWayfConfig;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.SamlBindingEnum;
-import org.esco.sso.security.saml.SamlRequestData;
+import org.esco.sso.security.saml.om.IOutgoingSaml;
+import org.esco.sso.security.saml.om.impl.SamlOutgoingMessage;
 import org.opensaml.xml.signature.SignatureTrustEngine;
 import org.springframework.core.io.Resource;
 import org.springframework.web.context.request.RequestAttributes;
@@ -44,8 +45,8 @@ public class CasIdpConfig implements IIdpConfig {
 	}
 
 	@Override
-	public SamlRequestData getSamlAuthnRequest(final SamlBindingEnum binding) {
-		SamlRequestData fakeRequest = new SamlRequestData(null, null);
+	public IOutgoingSaml getSamlAuthnRequest(final SamlBindingEnum binding) {
+		SamlOutgoingMessage fakeRequest = new SamlOutgoingMessage(null);
 
 		RequestAttributes reqAttrs = RequestContextHolder.getRequestAttributes();
 		if (reqAttrs instanceof ServletRequestAttributes) {
@@ -60,7 +61,7 @@ public class CasIdpConfig implements IIdpConfig {
 	}
 
 	@Override
-	public SamlRequestData getSamlSingleLogoutRequest(final SamlBindingEnum binding) {
+	public IOutgoingSaml getSamlSingleLogoutRequest(final SamlBindingEnum binding) {
 		// Never used for CAS  IdP config !
 		throw new IllegalAccessError("This method must not be called !");
 	}

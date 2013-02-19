@@ -3,32 +3,22 @@
  */
 package org.esco.sso.security.saml.opensaml;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.StringWriter;
-import java.io.Writer;
-import java.net.URLEncoder;
+import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Timer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
-import java.util.zip.Inflater;
-import java.util.zip.InflaterInputStream;
 
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.esco.sso.security.saml.SamlBindingEnum;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.opensaml.common.IdentifierGenerator;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.impl.SecureRandomIdentifierGenerator;
@@ -46,8 +36,9 @@ import org.opensaml.xml.parse.XMLParserException;
 import org.opensaml.xml.signature.Signature;
 import org.opensaml.xml.signature.SignatureException;
 import org.opensaml.xml.signature.Signer;
-import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.util.XMLHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 import org.w3c.dom.Document;
@@ -60,26 +51,7 @@ import org.w3c.dom.Element;
 public abstract class OpenSamlHelper {
 
 	/** Logger. */
-	private static final Log LOGGER = LogFactory.getLog(OpenSamlHelper.class);
-
-	/** Saml HTTP-Redirect binding encoding. */
-	private static final String CHAR_ENCODING = "UTF-8";
-
-	/** Char separator for relay state. */
-	private static final String RELAY_STATE_SEPARATOR = "$";
-
-	/** Regex matching Relay State Separator char. */
-	private static final String RSS = "\\" + OpenSamlHelper.RELAY_STATE_SEPARATOR;
-
-	/** Regex matching all chars except Relay State Separator. */
-	private static final String NRSS = "([^" + OpenSamlHelper.RSS + "]+)";
-
-	/** Regex matching a decoded relay state (xxxx)$(xxxx)$(xxxx). */
-	private static final String RELAY_STATE_REGEX =
-			OpenSamlHelper.NRSS + OpenSamlHelper.RSS + OpenSamlHelper.NRSS
-			+ OpenSamlHelper.RSS + OpenSamlHelper.NRSS;
-
-	private static final Pattern RELAY_STATE_PATTERN = Pattern.compile(OpenSamlHelper.RELAY_STATE_REGEX);
+	private static final Logger LOGGER = LoggerFactory.getLogger(OpenSamlHelper.class);
 
 	private static IdentifierGenerator idGenerator;
 
@@ -99,13 +71,22 @@ public abstract class OpenSamlHelper {
 	 * @throws MarshallingException
 	 */
 	public static String marshallXmlObject(final XMLObject xmlObject) throws MarshallingException {
-		Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(xmlObject);
-		Element element = marshaller.marshall(xmlObject);
-		StringWriter rspWrt = new StringWriter();
-		XMLHelper.writeNode(element, rspWrt);
-		String messageXML = rspWrt.toString();
+		String xmlMessage = null;
+		try {
+			Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(xmlObject);
+			Element element = marshaller.marshall(xmlObject);
+			StringWriter rspWrt = new StringWriter();
+			XMLHelper.writeNode(element, rspWrt);
+			xmlMessage = rspWrt.toString();
 
-		return messageXML;
+			// Logging XML Authn Response
+			OpenSamlHelper.LOGGER.debug("Marshalled SAML Object: {}", xmlMessage);
+		} catch (MarshallingException e) {
+			OpenSamlHelper.LOGGER.warn("Error while marshalling SAML 2.0 Object !", e);
+			throw e;
+		}
+
+		return xmlMessage;
 	}
 
 	/**
@@ -145,108 +126,17 @@ public abstract class OpenSamlHelper {
 	 * @param binding the binding
 	 * @return the relay state
 	 */
-	public static String generateRelayState(final int idpConfigId, final SamlBindingEnum binding) {
+	public static String generateRelayState(final String idpConfigId, final SamlBindingEnum binding) {
 		StringBuilder relayState = new StringBuilder(128);
 		// Random chain
 		relayState.append(OpenSamlHelper.generateRandomHexString(16));
 		// Plus time (ns)
 		relayState.append(String.valueOf(System.nanoTime()).substring(5));
-		relayState.append(OpenSamlHelper.RELAY_STATE_SEPARATOR);
-		// IdP confi Id
-		relayState.append(idpConfigId);
-		relayState.append(OpenSamlHelper.RELAY_STATE_SEPARATOR);
+		relayState.append(SamlHelper.RELAY_STATE_SEPARATOR);
 		// Supported binding
 		relayState.append(binding.ordinal());
 
-		return OpenSamlHelper.base64Encode(relayState.toString());
-	}
-
-	/**
-	 * Extract the IdP config Id from the relay state.
-	 * 
-	 * @param relayStateEncoded the relay state
-	 * @return the IdP config Id
-	 */
-	public static String extractIdpConfigIdFromRelayState(final String relayStateEncoded) {
-		final String idpConfigId = OpenSamlHelper.extractDataFromRelayState(relayStateEncoded, 2);
-
-		Assert.notNull(idpConfigId, "Error : invalid relay state format !");
-
-		return idpConfigId;
-	}
-
-	/**
-	 * Extract the IdP config Id from the relay state.
-	 * 
-	 * @param relayStateEncoded the relay state
-	 * @return the IdP config Id
-	 */
-	public static SamlBindingEnum extractBindingFromRelayState(final String relayStateEncoded) {
-		SamlBindingEnum binding = null;
-		String pos = OpenSamlHelper.extractDataFromRelayState(relayStateEncoded, 3);
-
-		try {
-			int ordinal = Integer.valueOf(pos);
-			binding = SamlBindingEnum.values()[ordinal];
-		} catch (NumberFormatException e) {
-			OpenSamlHelper.LOGGER.error("Error : invalid relay state format !", e);
-		}
-
-		Assert.notNull(binding, "Error : invalid relay state format !");
-
-		return binding;
-	}
-
-	/**
-	 * Extract informations from relay state using regexp grouping.
-	 * 
-	 * @param relayStateEncoded the encoded relay state
-	 * @param pos the data position in relay state
-	 * @return the informations
-	 */
-	protected static String extractDataFromRelayState(final String relayStateEncoded, final int pos) {
-		String result = null;
-		String relayState = OpenSamlHelper.base64Decode(relayStateEncoded);
-
-		Matcher m = OpenSamlHelper.RELAY_STATE_PATTERN.matcher(relayState);
-		if (m.find()) {
-			result = m.group(pos);
-		}
-		Assert.notNull(result, "Error : invalid relay state format !");
-		return result;
-	}
-
-	public static String base64Encode(final String text) {
-		String encodedText = Base64.encodeBytes(text.getBytes(), Base64.DONT_BREAK_LINES);
-
-		return encodedText;
-	}
-
-	public static String base64Decode(final String text) {
-		byte[] decodedText = Base64.decode(text);
-
-		return new String(decodedText);
-	}
-
-	public static String cleanupUrl(final String url) {
-		if (url == null) {
-			return null;
-		}
-
-		final int jsessionPosition = url.indexOf(";jsession");
-
-		if (jsessionPosition == -1) {
-			return url;
-		}
-
-		final int questionMarkPosition = url.indexOf("?");
-
-		if (questionMarkPosition < jsessionPosition) {
-			return url.substring(0, url.indexOf(";jsession"));
-		}
-
-		return url.substring(0, jsessionPosition)
-				+ url.substring(questionMarkPosition);
+		return SamlHelper.base64Encode(relayState.toString());
 	}
 
 	/**
@@ -259,6 +149,26 @@ public abstract class OpenSamlHelper {
 		return id;
 	}
 
+	public static String encodeSamlObject(final SamlBindingEnum binding, final SignableSAMLObject samlObject) {
+		String encodedAuthnRequest = null;
+		try {
+			switch (binding) {
+			case SAML_20_HTTP_POST:
+				encodedAuthnRequest = OpenSamlHelper.httpPostEncode(samlObject);
+				break;
+			case SAML_20_HTTP_REDIRECT:
+				encodedAuthnRequest = OpenSamlHelper.httpRedirectEncode(samlObject);
+				break;
+			}
+		} catch (UnsupportedEncodingException e) {
+			OpenSamlHelper.LOGGER.error("Error while encoding SAML 2.0 AuthnRequest !", e);
+		} catch (IOException e) {
+			OpenSamlHelper.LOGGER.error("Error while encoding SAML 2.0 AuthnRequest !", e);
+		}
+		Assert.notNull(encodedAuthnRequest, "Error while encoding authn request !");
+		return encodedAuthnRequest;
+	}
+
 	/**
 	 * Encode a SAML2 request for the HTTP-POST binding.
 	 * 
@@ -268,7 +178,6 @@ public abstract class OpenSamlHelper {
 	 */
 	public static String httpPostEncode(final SignableSAMLObject signable) throws IOException {
 		String base64EncodedRequest = null;
-		ByteArrayOutputStream byteArrayOutputStream = null;
 
 		if (signable != null) {
 
@@ -297,44 +206,12 @@ public abstract class OpenSamlHelper {
 				String messageXML = rspWrt.toString();
 
 				// Encode XML message
-				base64EncodedRequest = OpenSamlHelper.httpPostEncode(messageXML);
+				base64EncodedRequest = SamlHelper.httpPostEncode(messageXML);
 
 			} catch (MarshallingException e) {
 				OpenSamlHelper.LOGGER.error("Error while marshalling SAML 2.0 Request !", e);
 			} catch (SignatureException e) {
 				OpenSamlHelper.LOGGER.error("Error while signing SAML 2.0 Request !", e);
-			}
-		}
-
-		return base64EncodedRequest;
-	}
-
-	/**
-	 * Encode a SAML2 request for the HTTP-POST binding.
-	 * 
-	 * @param signable the request
-	 * @return the encoded request
-	 * @throws IOException
-	 */
-	public static String httpPostEncode(final String samlMessage) throws IOException {
-		ByteArrayOutputStream byteArrayOutputStream = null;
-		String base64EncodedRequest = null;
-
-		try {
-			byteArrayOutputStream = new ByteArrayOutputStream();
-
-			// Base 64 Encoded Only for HTTP POST binding
-			byteArrayOutputStream.write(samlMessage.getBytes());
-			byteArrayOutputStream.flush();
-			base64EncodedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
-
-			if (OpenSamlHelper.LOGGER.isDebugEnabled()) {
-				OpenSamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", samlMessage));
-				OpenSamlHelper.LOGGER.debug(String.format("Encoded HTTP-POST Request: %s", base64EncodedRequest));
-			}
-		} finally {
-			if (byteArrayOutputStream != null) {
-				byteArrayOutputStream.close();
 			}
 		}
 
@@ -370,7 +247,7 @@ public abstract class OpenSamlHelper {
 				String messageXML = rspWrt.toString();
 
 				// Encode XML message
-				urlEncodedRequest = OpenSamlHelper.httpRedirectEncode(messageXML);
+				urlEncodedRequest = SamlHelper.httpRedirectEncode(messageXML);
 
 			} catch (MarshallingException e) {
 				OpenSamlHelper.LOGGER.error("Error while marshalling SAML 2.0 Request !", e);
@@ -388,91 +265,6 @@ public abstract class OpenSamlHelper {
 
 		return urlEncodedRequest;
 	}
-
-	/**
-	 * Encode a SAML2 request for the HTTP-redirect binding.
-	 * 
-	 * @param request the request
-	 * @return the encoded request
-	 * @throws IOException
-	 */
-	public static String httpRedirectEncode(final String samlMessage) throws IOException {
-		String urlEncodedRequest = null;
-		ByteArrayOutputStream byteArrayOutputStream = null;
-		DeflaterOutputStream deflaterOutputStream = null;
-
-		try {
-
-			Deflater deflater = new Deflater(Deflater.DEFLATED, true);
-			byteArrayOutputStream = new ByteArrayOutputStream();
-			deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream, deflater);
-
-			// Deflated then Base 64 encoded then Url Encoded for HTTP REDIRECT Binding
-			deflaterOutputStream.write(samlMessage.getBytes());
-			deflaterOutputStream.finish();
-			deflater.finish();
-
-			String deflatedRequest = Base64.encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
-			urlEncodedRequest = URLEncoder.encode(deflatedRequest, OpenSamlHelper.CHAR_ENCODING);
-
-			if (OpenSamlHelper.LOGGER.isDebugEnabled()) {
-				OpenSamlHelper.LOGGER.debug(String.format("SAML 2.0 Request: %s", samlMessage));
-				OpenSamlHelper.LOGGER.debug(String.format("Encoded HTTP-Redirect Request: %s", urlEncodedRequest));
-			}
-		} finally {
-			if (byteArrayOutputStream != null) {
-				byteArrayOutputStream.close();
-			}
-			if (deflaterOutputStream != null) {
-				deflaterOutputStream.close();
-			}
-		}
-
-		return urlEncodedRequest;
-	}
-
-	/**
-	 * Decode a SAML2 anthentication request for the HTTP-redirect binding.
-	 * 
-	 * @param authnRequest the authn request
-	 * @return the encoded request
-	 * @throws IOException
-	 */
-	public static String httpRedirectDecode(final String encodedRequest) throws IOException {
-		String inflatedRequest = null;
-
-		ByteArrayInputStream bytesIn = null;
-		InflaterInputStream inflater = null;
-
-		byte[] decodedBytes = Base64.decode(encodedRequest);
-
-		try {
-			bytesIn = new ByteArrayInputStream(decodedBytes);
-			inflater = new InflaterInputStream(bytesIn, new Inflater(true));
-			Writer writer = new StringWriter();
-			char[] buffer = new char[1024];
-
-			Reader reader = new BufferedReader(
-					new InputStreamReader(inflater, "UTF-8"));
-			int n;
-			while ((n = reader.read(buffer)) != -1) {
-				writer.write(buffer, 0, n);
-			}
-
-			inflatedRequest = writer.toString();
-		} finally {
-			if (bytesIn != null) {
-				bytesIn.close();
-			}
-			if (inflater != null) {
-				inflater.close();
-			}
-		}
-
-
-		return inflatedRequest;
-	}
-
 
 	/**
 	 * Build a metadata provider if a metadata resource was provided.
