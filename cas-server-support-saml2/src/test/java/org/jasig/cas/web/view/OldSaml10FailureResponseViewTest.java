@@ -16,7 +16,7 @@
 /**
  * 
  */
-package org.esco.cas.web.view;
+package org.jasig.cas.web.view;
 
 import org.jasig.cas.authentication.principal.SamlService;
 import org.jasig.cas.authentication.principal.Service;

@@ -16,7 +16,7 @@
 /**
  * 
  */
-package org.esco.cas.web.view;
+package org.jasig.cas.web.view;
 
 import java.util.ArrayList;
 import java.util.Date;
