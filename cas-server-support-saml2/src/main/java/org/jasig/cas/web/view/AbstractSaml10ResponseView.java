@@ -21,7 +21,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.esco.cas.web.view;
+package org.jasig.cas.web.view;
 
 import java.lang.reflect.Field;
 import java.security.NoSuchAlgorithmException;
@@ -32,9 +32,9 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import javax.xml.namespace.QName;
 
-import org.esco.cas.util.CasHTTPSOAP11Encoder;
 import org.jasig.cas.authentication.principal.SamlService;
 import org.jasig.cas.authentication.principal.WebApplicationService;
+import org.jasig.cas.util.CasHTTPSOAP11Encoder;
 import org.jasig.cas.web.support.SamlArgumentExtractor;
 import org.joda.time.DateTime;
 import org.opensaml.DefaultBootstrap;

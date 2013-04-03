@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.esco.cas</groupId>
 	<artifactId>cas-server-support-saml2</artifactId>
-	<version>1.1.0</version>
+	<version>1.1.1</version>
 	<packaging>jar</packaging>
 	<name>SAML2 authentication support</name>
 
@@ -190,6 +190,18 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>com.mycila.maven-license-plugin</groupId>
+				<artifactId>maven-license-plugin</artifactId>
+				<configuration>
+					<header>src/etc/header.txt</header>
+					<includes>
+						<include>src/main/java/org/esco/**</include>
+						<include>src/main/resources/**</include>
+						<include>src/test/**</include>
+					</includes>
+				</configuration>
+			</plugin>			
 		</plugins>
 	</build>
 	

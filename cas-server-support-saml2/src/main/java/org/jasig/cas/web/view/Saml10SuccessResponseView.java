@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.esco.cas.web.view;
+package org.jasig.cas.web.view;
 
 import java.util.Collection;
 import java.util.Map;

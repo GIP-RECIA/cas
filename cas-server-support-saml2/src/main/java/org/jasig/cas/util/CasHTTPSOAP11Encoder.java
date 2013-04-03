@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.esco.cas.util;
+package org.jasig.cas.util;
 
 import org.opensaml.common.SAMLObject;
 import org.opensaml.saml1.binding.encoding.HTTPSOAP11Encoder;

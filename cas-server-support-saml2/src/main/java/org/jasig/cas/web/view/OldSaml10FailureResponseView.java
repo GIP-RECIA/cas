@@ -3,7 +3,7 @@
  * distributed with this file and available online at
  * http://www.ja-sig.org/products/cas/overview/license/
  */
-package org.esco.cas.web.view;
+package org.jasig.cas.web.view;
 
 import java.util.ArrayList;
 import java.util.Map;
