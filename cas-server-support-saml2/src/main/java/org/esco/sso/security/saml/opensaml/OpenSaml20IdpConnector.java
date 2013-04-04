@@ -127,7 +127,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		final IOutgoingSaml outgoingSaml;
 		try {
 			final QueryAuthnRequest samlQuery = this.buildQueryAuthnRequest(request.getParameterMap());
-			outgoingSaml = this.buildSamlOutgoingRequest(samlQuery, authnRequest, binding);
+			final String ssoEndpointUrl = this.idpConfig.getIdpSsoEndpointUrl(binding);
+			outgoingSaml = this.buildSamlOutgoingRequest(samlQuery, authnRequest, binding, ssoEndpointUrl);
 			this.getSaml20SpProcessor().storeRequestWaitingForResponseInCache(samlQuery);
 
 		} catch (MarshallingException e) {
@@ -155,7 +156,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		final IOutgoingSaml outgoingSaml;
 		try {
 			final QuerySloRequest samlQuery = this.buildQuerySloRequest();
-			outgoingSaml = this.buildSamlOutgoingRequest(samlQuery, logoutRequest, binding);
+			final String sloEndpointUrl = this.idpConfig.getIdpSloEndpointUrl(binding);
+			outgoingSaml = this.buildSamlOutgoingRequest(samlQuery, logoutRequest, binding, sloEndpointUrl);
 			this.getSaml20SpProcessor().storeRequestWaitingForResponseInCache(samlQuery);
 
 		} catch (MarshallingException e) {
@@ -175,7 +177,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		final IOutgoingSaml outgoingSaml;
 		try {
 			final IQuery samlQuery = this.buildQuerySloResponse(originRequestId);
-			outgoingSaml = this.buildSamlOutgoingMessage(samlQuery, logoutResponse, binding, relayState);
+			final String sloEndpointUrl = this.idpConfig.getIdpSloEndpointUrl(binding);
+			outgoingSaml = this.buildSamlOutgoingMessage(samlQuery, logoutResponse, binding, relayState, sloEndpointUrl);
 
 		} catch (MarshallingException e) {
 			throw new SamlBuildingException("Unable to build SAML 2.0 SLO Response !", e);
@@ -206,14 +209,14 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 	 * @throws MarshallingException
 	 */
 	protected SamlOutgoingMessage buildSamlOutgoingRequest(final IRequestWaitingForResponse samlQuery,
-			final RequestAbstractType request, final SamlBindingEnum binding)
+			final RequestAbstractType request, final SamlBindingEnum binding, final String endpointUrl)
 					throws MarshallingException {
 		request.setID(samlQuery.getId());
 
 		final String relayState = OpenSamlHelper.generateRelayState(
 				this.getIdpConfig().getId(), binding);
 
-		return this.buildSamlOutgoingMessage(samlQuery, request, binding, relayState);
+		return this.buildSamlOutgoingMessage(samlQuery, request, binding, relayState, endpointUrl);
 	}
 
 	/**
@@ -226,7 +229,7 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 	 * @throws MarshallingException
 	 */
 	protected SamlOutgoingMessage buildSamlOutgoingMessage(final IQuery samlQuery,
-			final SAMLObject samlObject, final SamlBindingEnum binding, final String relayState)
+			final SAMLObject samlObject, final SamlBindingEnum binding, final String relayState, final String endpointUrl)
 					throws MarshallingException {
 		Assert.notNull(samlQuery, "No SAML Query provided !");
 		Assert.notNull(samlObject, "No OpenSaml object provided !");
@@ -246,7 +249,7 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		// Xml Message
 		String xmlLogoutResponse = OpenSamlHelper.marshallXmlObject(samlObject);
 		samlOutgoingMessage.setSamlMessage(xmlLogoutResponse);
-		samlOutgoingMessage.setEndpointUrl(this.idpConfig.getIdpSloEndpointUrl(binding));
+		samlOutgoingMessage.setEndpointUrl(endpointUrl);
 
 		return samlOutgoingMessage;
 	}
