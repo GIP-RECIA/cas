@@ -18,7 +18,6 @@
  */
 package org.esco.sso.security.saml.impl;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -109,19 +108,12 @@ public class BasicSamlDataAdaptor implements ISamlDataAdaptor {
 			redirectUrl.append(encodedMessage);
 		}
 
-		String urlEncodedRequest = null;
-		try {
-			urlEncodedRequest = URLEncoder.encode(redirectUrl.toString(), SamlHelper.CHAR_ENCODING);
-		} catch (UnsupportedEncodingException e) {
-			final String message = "Error while URL encoding SAML message !";
-			BasicSamlDataAdaptor.LOGGER.error(message, e);
-			throw new IllegalStateException(message, e);
-		}
+		String urlRequest = redirectUrl.toString();
 
 		BasicSamlDataAdaptor.LOGGER.debug(
-				"Basic HTTP-Redirect URL built: [{}]", urlEncodedRequest);
+				"Basic HTTP-Redirect URL built: [{}]", urlRequest);
 
-		return urlEncodedRequest;
+		return urlRequest;
 	}
 
 	@Override
