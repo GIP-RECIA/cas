@@ -79,36 +79,43 @@ public class BasicSamlDataAdaptor implements ISamlDataAdaptor {
 		final String relayState = outgoingData.getRelayState();
 
 		// Encoding
-		final String encodedMessage;
-		String encodedRelayState = null;
+		final String httpEncodedMessage;
+		final String urlEncodedMessage;
+		final String urlEncodedRelayState;
 		try {
 			Assert.hasText(samlMessage, "SAML message cannot be empty !");
-			encodedMessage = SamlHelper.httpRedirectEncode(samlMessage);
+			// HTTP-Redirect encoding
+			httpEncodedMessage = SamlHelper.httpRedirectEncode(samlMessage);
+
+			// URL encoding
+			urlEncodedMessage = URLEncoder.encode(httpEncodedMessage, "UTF-8");
 			if (StringUtils.hasText(relayState)) {
-				encodedRelayState = URLEncoder.encode(relayState, "UTF-8");
+				urlEncodedRelayState = URLEncoder.encode(relayState, "UTF-8");
+			} else {
+				urlEncodedRelayState = null;
 			}
 		} catch (Exception e) {
-			final String message = "Error while Redirect encoding SAML message !";
+			final String message = "Error while HTTP-Redirect encoding SAML message !";
 			BasicSamlDataAdaptor.LOGGER.error(message, e);
 			throw new IllegalStateException(message, e);
 		}
 
 		StringBuffer redirectUrl = new StringBuffer(2048);
 		redirectUrl.append(outgoingData.getEndpointUrl());
-		if (StringUtils.hasText(encodedMessage) && StringUtils.hasText(encodedRelayState)) {
+		if (StringUtils.hasText(urlEncodedMessage) && StringUtils.hasText(urlEncodedRelayState)) {
 			redirectUrl.append("?");
-			if (StringUtils.hasText(encodedRelayState)) {
+			if (StringUtils.hasText(urlEncodedRelayState)) {
 				redirectUrl.append(SamlHelper.RELAY_STATE_PARAM_KEY);
 				redirectUrl.append("=");
-				redirectUrl.append(encodedRelayState);
+				redirectUrl.append(urlEncodedRelayState);
 				redirectUrl.append("&");
 			}
 			redirectUrl.append(BasicSamlDataAdaptor.getSamlMessageParamName(outgoingData));
 			redirectUrl.append("=");
-			redirectUrl.append(encodedMessage);
+			redirectUrl.append(urlEncodedMessage);
 		}
 
-		String urlRequest = redirectUrl.toString();
+		final String urlRequest = redirectUrl.toString();
 
 		BasicSamlDataAdaptor.LOGGER.debug(
 				"Basic HTTP-Redirect URL built: [{}]", urlRequest);

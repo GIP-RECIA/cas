@@ -407,6 +407,7 @@ public abstract class SamlHelper {
 
 	/**
 	 * Encode a SAML2 request for the HTTP-redirect binding.
+	 * The encoded message is not URL encoded !
 	 * 
 	 * @param request the request
 	 * @return the encoded request
