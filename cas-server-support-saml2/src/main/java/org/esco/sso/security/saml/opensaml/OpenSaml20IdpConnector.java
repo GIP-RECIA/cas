@@ -257,16 +257,16 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		}
 
 		// MBD bug : Forgot to sign the SAML Object
-		// Xml Message
-		final String xmlLogoutResponse;
+		// Xml outgoing message
+		final String xmlOutgoingMsg;
 		if (SignableSAMLObject.class.isAssignableFrom(samlObject.getClass())) {
 			final SignableSAMLObject signableSamlObject = (SignableSAMLObject) samlObject;
-			xmlLogoutResponse = OpenSamlHelper.marshallSignableSamlObject(signableSamlObject);
+			xmlOutgoingMsg = OpenSamlHelper.marshallSignableSamlObject(signableSamlObject);
 		} else {
-			xmlLogoutResponse = OpenSamlHelper.marshallXmlObject(samlObject);
+			xmlOutgoingMsg = OpenSamlHelper.marshallXmlObject(samlObject);
 		}
 
-		samlOutgoingMessage.setSamlMessage(xmlLogoutResponse);
+		samlOutgoingMessage.setSamlMessage(xmlOutgoingMsg);
 		samlOutgoingMessage.setEndpointUrl(endpointUrl);
 
 		return samlOutgoingMessage;
