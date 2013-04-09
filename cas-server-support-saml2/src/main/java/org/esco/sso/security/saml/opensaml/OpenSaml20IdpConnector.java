@@ -43,6 +43,7 @@ import org.joda.time.DateTime;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLVersion;
+import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
@@ -67,6 +68,7 @@ import org.opensaml.saml2.core.impl.RequestedAuthnContextBuilder;
 import org.opensaml.saml2.core.impl.SessionIndexBuilder;
 import org.opensaml.saml2.core.impl.SubjectBuilder;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.signature.SignatureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -133,6 +135,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 		} catch (MarshallingException e) {
 			throw new SamlBuildingException("Unable to build SAML 2.0 AuthnRequest !", e);
+		} catch (SignatureException e) {
+			throw new SamlBuildingException("Unable to sign SAML 2.0 AuthnRequest !", e);
 		}
 
 		return outgoingSaml;
@@ -162,6 +166,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 		} catch (MarshallingException e) {
 			throw new SamlBuildingException("Unable to build SAML 2.0 SLO Request !", e);
+		} catch (SignatureException e) {
+			throw new SamlBuildingException("Unable to sign SAML 2.0 SLO Request !", e);
 		}
 
 		return outgoingSaml;
@@ -182,6 +188,8 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 		} catch (MarshallingException e) {
 			throw new SamlBuildingException("Unable to build SAML 2.0 SLO Response !", e);
+		} catch (SignatureException e) {
+			throw new SamlBuildingException("Unable to sign SAML 2.0 SLO Response !", e);
 		}
 
 		return outgoingSaml;
@@ -207,10 +215,11 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 	 * @param relayState
 	 * @return samlOutgoingMessage the outgoing message to send
 	 * @throws MarshallingException
+	 * @throws SignatureException
 	 */
 	protected SamlOutgoingMessage buildSamlOutgoingRequest(final IRequestWaitingForResponse samlQuery,
 			final RequestAbstractType request, final SamlBindingEnum binding, final String endpointUrl)
-					throws MarshallingException {
+					throws MarshallingException, SignatureException {
 		request.setID(samlQuery.getId());
 
 		final String relayState = OpenSamlHelper.generateRelayState(
@@ -227,10 +236,11 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 	 * @param relayState
 	 * @return samlOutgoingMessage the outgoing message to send
 	 * @throws MarshallingException
+	 * @throws SignatureException
 	 */
 	protected SamlOutgoingMessage buildSamlOutgoingMessage(final IQuery samlQuery,
 			final SAMLObject samlObject, final SamlBindingEnum binding, final String relayState, final String endpointUrl)
-					throws MarshallingException {
+					throws MarshallingException, SignatureException {
 		Assert.notNull(samlQuery, "No SAML Query provided !");
 		Assert.notNull(samlObject, "No OpenSaml object provided !");
 		Assert.notNull(binding, "No binding provided !");
@@ -246,8 +256,16 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 			this.logger.debug(String.format("Random RelayState: %s", relayState));
 		}
 
+		// MBD bug : Forgot to sign the SAML Object
 		// Xml Message
-		String xmlLogoutResponse = OpenSamlHelper.marshallXmlObject(samlObject);
+		final String xmlLogoutResponse;
+		if (SignableSAMLObject.class.isAssignableFrom(samlObject.getClass())) {
+			final SignableSAMLObject signableSamlObject = (SignableSAMLObject) samlObject;
+			xmlLogoutResponse = OpenSamlHelper.marshallSignableSamlObject(signableSamlObject);
+		} else {
+			xmlLogoutResponse = OpenSamlHelper.marshallXmlObject(samlObject);
+		}
+
 		samlOutgoingMessage.setSamlMessage(xmlLogoutResponse);
 		samlOutgoingMessage.setEndpointUrl(endpointUrl);
 

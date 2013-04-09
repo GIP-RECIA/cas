@@ -104,6 +104,32 @@ public abstract class OpenSamlHelper {
 		return xmlMessage;
 	}
 
+	public static String marshallSignableSamlObject(final SignableSAMLObject signableSamlObject)
+			throws MarshallingException, SignatureException {
+		String xmlMessage = null;
+		try {
+			Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(signableSamlObject);
+			Element element = marshaller.marshall(signableSamlObject);
+
+			// Sign the saml object
+			Signature signature = signableSamlObject.getSignature();
+			Assert.notNull(signature, "The request is not signed !");
+			Signer.signObject(signature);
+
+			StringWriter rspWrt = new StringWriter();
+			XMLHelper.writeNode(element, rspWrt);
+			xmlMessage = rspWrt.toString();
+
+			// Logging XML Authn Response
+			OpenSamlHelper.LOGGER.debug("Marshalled SAML Object: {}", xmlMessage);
+		} catch (MarshallingException e) {
+			OpenSamlHelper.LOGGER.warn("Error while marshalling SAML 2.0 Object !", e);
+			throw e;
+		}
+
+		return xmlMessage;
+	}
+
 	/**
 	 * Unmarshall an opensaml XMLObject.
 	 * @param xmlObjectQName
