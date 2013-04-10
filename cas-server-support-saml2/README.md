@@ -7,6 +7,7 @@ When integrate in the CAS workflow, this plugin allow the CAS server to be seen 
 
 The users may authenticate themselves from the CAS server, or from a distant Identity Provider like Shibboleth IdP.
 
+![ScreenShot](https://raw.github.com/GIP-RECIA/cas/feature-saml2/cas-server-support-saml2/global_workflow.png)
 
 
 ## How it works
