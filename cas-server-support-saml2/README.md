@@ -37,3 +37,10 @@ Single Logout Protocol
 HTTP-POST binding
 HTTP-Redirect binding
 We thought the next feature we need to implement will be the HTTP-Artifact Resolution Protocol with it's binding.
+
+## Plugin Configuration
+
+The plugin configuration can be done with spring beans files.
+Several sample configuration files to put in the CAS webapp are in the config-sample folder.
+
+## Plugin Integration
