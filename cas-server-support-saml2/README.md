@@ -41,6 +41,6 @@ We thought the next feature we need to implement will be the HTTP-Artifact Resol
 ## Plugin Configuration
 
 The plugin configuration can be done with spring beans files.
-Several sample configuration files to put in the CAS webapp are in the config-sample folder.
+Several sample configuration files to put in the CAS webapp are in the sample-config folder.
 
 ## Plugin Integration
