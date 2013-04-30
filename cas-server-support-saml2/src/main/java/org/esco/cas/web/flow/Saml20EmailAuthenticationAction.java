@@ -22,6 +22,7 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.ISaml20Facade;
@@ -72,25 +73,34 @@ public class Saml20EmailAuthenticationAction extends AbstractNonInteractiveCrede
 
 				// List of authentications
 				final List<IAuthentication> authentications = authnResp.getSamlAuthentications();
-				Assert.isTrue(authentications.size() == 1,
-						"SAML Authn Response must contain 1 and only 1 authentication !");
 
-				// Unique authentication
-				final IAuthentication authentication = authentications.iterator().next();
+				// MBD FIX 2013-04-30 : We may have multiple authentications
+				if (authentications != null) {
+					for (final IAuthentication authentication : authentications) {
+						final List<String> emailAttributeValues = 
+								authentication.getAttribute(this.emailAttributeFriendlyName);
+						if (!CollectionUtils.isEmpty(emailAttributeValues)) {
+							// If the emailAttribute was found this is our athentication statement
+							credentials = new EmailAddressesCredentials(emailAttributeValues);
+							
+							final SamlAuthInfo authInfos = credentials.getAuthenticationInformations();
+							String idpEntityId = authnResp.getOriginalRequest().getIdpConnectorBuilder()
+									.getIdpConfig().getIdpEntityId();
+							Assert.notNull(idpEntityId, "The IdP entity ID cannot be null here !");
+							authInfos.setIdpEntityId(idpEntityId);
+							authInfos.setIdpSubject(authentication.getSubjectId());
+							authInfos.setSessionIndex(authentication.getSessionIndex());
+							
+							break;
+						}
+					}
+				}
 
-				// If a SAML response was found, the user is already authenticated via SAML
-				List<String> emailAttributeValues = authentication.getAttribute(this.emailAttributeFriendlyName);
-
-				credentials = new EmailAddressesCredentials(emailAttributeValues);
-
-				SamlAuthInfo authInfos = credentials.getAuthenticationInformations();
-				String idpEntityId = authnResp.getOriginalRequest().getIdpConnectorBuilder()
-						.getIdpConfig().getIdpEntityId();
-				Assert.notNull(idpEntityId, "The IdP entity ID cannot be null here !");
-				authInfos.setIdpEntityId(idpEntityId);
-				authInfos.setIdpSubject(authentication.getSubjectId());
-				authInfos.setSessionIndex(authentication.getSessionIndex());
-
+				// credentials can be null here if no satisfaying authentication was found !
+				if (credentials == null) {
+					Saml20EmailAuthenticationAction.LOGGER.error("No satisfaying authentication could be found in Authn Response !");
+				}
+				
 				// Put email credentials in flow scope
 				context.getFlowScope().put(Saml20EmailAuthenticationAction.SAML_CREDENTIALS_FLOW_SCOPE_KEY, credentials);
 			}

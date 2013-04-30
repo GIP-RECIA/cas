@@ -309,27 +309,30 @@ public class AuthnResponseQueryProcessor extends BaseOpenSaml2QueryProcessor<Que
 
 		try {
 			// Our Authn Response could carry multiple assertions, we are interressed only by an AuthnStatement Assertion.
-			for (Assertion assertion : this.assertions) {
+			for (final Assertion assertion : this.assertions) {
 				// We look for an AuthnStatement Assertion !
-				final AuthnStatement authnStatement = this.retrieveAuthnStatement(assertion);
-				if (authnStatement != null) {
-					Subject subject = this.validateAndRetrieveSubject(assertion);
-					NameID nameId = subject.getNameID();
-					if (nameId == null) {
-						throw new UnsupportedSamlOperation(
-								"Subject NameID missing other ID types are not supported !");
+				final List<AuthnStatement> authnStatements = assertion.getAuthnStatements();
+				if (authnStatements != null) {
+					for (final AuthnStatement authnStatement : authnStatements) {
+						// MBD FIX 2013-04-30 : Loop on all AuthnStatement
+						final Subject subject = this.validateAndRetrieveSubject(assertion);
+						final NameID nameId = subject.getNameID();
+						if (nameId == null) {
+							throw new UnsupportedSamlOperation(
+									"Subject NameID missing other ID types are not supported !");
+						}
+	
+						BasicSamlAuthentication authn = new BasicSamlAuthentication();
+						authn.setAuthenticationInstant(authnStatement.getAuthnInstant());
+						authn.setSubjectId(nameId.getValue());
+						authn.setSessionIndex(authnStatement.getSessionIndex());
+	
+						this.processAuthnAttributes(assertion, authn);
+	
+						// Add the authentication to the list
+						authn.lock();
+						authentications.add(authn);
 					}
-
-					BasicSamlAuthentication authn = new BasicSamlAuthentication();
-					authn.setAuthenticationInstant(authnStatement.getAuthnInstant());
-					authn.setSubjectId(nameId.getValue());
-					authn.setSessionIndex(authnStatement.getSessionIndex());
-
-					this.processAuthnAttributes(assertion, authn);
-
-					// Add the authentication to the list
-					authn.lock();
-					authentications.add(authn);
 				}
 			}
 		} catch (SamlValidationException e) {
@@ -342,7 +345,7 @@ public class AuthnResponseQueryProcessor extends BaseOpenSaml2QueryProcessor<Que
 	}
 
 	/**
-	 * Retrieve the AuthnStatement in an assertion.
+	 * Retrieve a unique AuthnStatement in an assertion.
 	 * 
 	 * @param assertionsession assertion
 	 * @return the AuthnStatement of this assertion (can be null)
