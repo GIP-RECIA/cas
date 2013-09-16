@@ -27,6 +27,7 @@ import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
 
 import org.esco.cas.ISaml20Facade;
+import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.jasig.cas.web.support.CookieRetrievingCookieGenerator;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.cache.ehcache.EhCacheFactoryBean;
@@ -63,16 +64,16 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 	private CookieRetrievingCookieGenerator tgtCookieGenerator;
 
 	@Override
-	public void storeAuthenticationInfosInCache(final String tgtId, final SamlAuthInfo authInfos) {
-		if (StringUtils.hasText(tgtId) && (authInfos != null)) {
+	public void storeAuthenticationInfosInCache(final String tgtId, final ISaml20Credentials credentials) {
+		if (StringUtils.hasText(tgtId) && (credentials != null)) {
 			if (this.saml2AuthenticatedCredentialsCache.isKeyInCache(tgtId)) {
 				// TGT already used !
 				throw new IllegalStateException(String.format(
 						"Unable to store SAML 2.0 authenticated credentials in cache beacause TGT [%s] is already present !", tgtId));
 			}
-			this.saml2AuthenticatedCredentialsCache.put(new Element(tgtId, authInfos));
+			this.saml2AuthenticatedCredentialsCache.put(new Element(tgtId, credentials));
 
-			String idpSubject = authInfos.getIdpSubject();
+			String idpSubject = credentials.getAuthenticationInformations().getIdpSubject();
 			if (StringUtils.hasText(idpSubject)) {
 				this.saml2NameIdCache.put(new Element(idpSubject, tgtId));
 			}
@@ -80,15 +81,15 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 	}
 
 	@Override
-	public SamlAuthInfo retrieveAuthenticationInfosFromCache(final String tgtId) {
-		SamlAuthInfo authInfos = null;
+	public ISaml20Credentials retrieveAuthenticationInfosFromCache(final String tgtId) {
+		ISaml20Credentials authInfos = null;
 
 		if (StringUtils.hasText(tgtId)) {
 			Element element = this.saml2AuthenticatedCredentialsCache.get(tgtId);
 			if (element != null) {
 				Object value = element.getValue();
 				if (value != null) {
-					authInfos = (SamlAuthInfo) value;
+					authInfos = (ISaml20Credentials) value;
 				}
 			}
 		}
@@ -97,21 +98,21 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 	}
 
 	@Override
-	public SamlAuthInfo removeAuthenticationInfosFromCache(final String tgtId) {
-		SamlAuthInfo authInfos = this.retrieveAuthenticationInfosFromCache(tgtId);
+	public ISaml20Credentials removeAuthenticationInfosFromCache(final String tgtId) {
+		ISaml20Credentials credentials = this.retrieveAuthenticationInfosFromCache(tgtId);
 
 		if (StringUtils.hasText(tgtId)) {
 			this.saml2AuthenticatedCredentialsCache.remove(tgtId);
 		}
 
-		if (authInfos != null) {
-			String idpSubject = authInfos.getIdpSubject();
+		if (credentials != null) {
+			String idpSubject = credentials.getAuthenticationInformations().getIdpSubject();
 			if (StringUtils.hasText(idpSubject)) {
 				this.saml2NameIdCache.remove(idpSubject);
 			}
 		}
 
-		return authInfos;
+		return credentials;
 	}
 
 	@Override

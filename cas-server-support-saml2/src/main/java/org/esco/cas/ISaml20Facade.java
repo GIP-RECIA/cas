@@ -20,7 +20,7 @@ package org.esco.cas;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.esco.cas.impl.SamlAuthInfo;
+import org.esco.cas.authentication.principal.ISaml20Credentials;
 
 /**
  * @author GIP RECIA 2012 - Maxime BOSSARD.
@@ -29,29 +29,29 @@ import org.esco.cas.impl.SamlAuthInfo;
 public interface ISaml20Facade {
 
 	/**
-	 * Store SAML 2.0 Authentication infos for a TGT user.
+	 * Store SAML 2.0 Credentials for a TGT user.
 	 * 
 	 * @param tgtId the user's TGT Id
-	 * @param authInfos the authentication informations
+	 * @param credentials the user Credentials
 	 */
-	void storeAuthenticationInfosInCache(String tgtId, SamlAuthInfo authInfos);
+	void storeAuthenticationInfosInCache(String tgtId, ISaml20Credentials credentials);
 
 	/**
-	 * Retrieve SAML 2.0 Authentication infos of a TGT user.
+	 * Retrieve SAML 2.0 credentials of a TGT user.
 	 * 
 	 * @param tgtId the user's TGT Id
-	 * @return the authentication informations
+	 * @return the user Credentials
 	 */
-	SamlAuthInfo retrieveAuthenticationInfosFromCache(String tgtId);
+	ISaml20Credentials retrieveAuthenticationInfosFromCache(String tgtId);
 
 
 	/**
-	 * Remove SAML 2.0 Authentication infos of a TGT user.
+	 * Remove SAML 2.0 Credentials of a TGT user.
 	 * 
 	 * @param tgtId the user's TGT Id
-	 * @return the authentication informations
+	 * @return the user Credentials
 	 */
-	SamlAuthInfo removeAuthenticationInfosFromCache(String tgtId);
+	ISaml20Credentials removeAuthenticationInfosFromCache(String tgtId);
 
 	/**
 	 * Find the CAS TGT Id corresponding to the SAML 2.0 Name ID.

@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
 import org.esco.cas.ISaml20Facade;
+import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.SamlBindingEnum;
@@ -85,8 +86,11 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 		String tgtId = this.saml2Facade.retrieveTgtIdFromCookie(request);
 
 		if (StringUtils.hasText(tgtId)) {
-			SamlAuthInfo authInfos = this.saml2Facade.retrieveAuthenticationInfosFromCache(tgtId);
-			if (authInfos != null) {
+			ISaml20Credentials credentials = this.saml2Facade.retrieveAuthenticationInfosFromCache(tgtId);
+			SamlAuthInfo authInfos = null;
+			
+			// MBD FIX 2013-09-12 : SamlAuthInfo IdP entity Id may be null !
+			if (credentials != null && (authInfos = credentials.getAuthenticationInformations()) != null && authInfos.getIdpEntityId() != null) {
 				// The user authentified via SAML !
 				ISaml20IdpConnector idpConnector = SamlHelper.findIdpConnectorToUse(
 						authInfos.getIdpEntityId());
@@ -116,6 +120,9 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 					SamlSingleLogoutController.LOGGER.debug("Error while sending SLO Request !", e);
 				}
 
+			} else {
+				LOGGER.warn("Unable to retrieve Authentication informations from Cache. " +
+						"We cannot send a logout URL to the IdP. You may have a problem with your Cache configuration.");
 			}
 		}
 
@@ -143,14 +150,14 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 
 		String idpEntityId = idpConnector.getIdpConfig().getIdpEntityId();
 		if (responseCode < 0) {
-			SamlSingleLogoutController.LOGGER.warn("Unable to send SAML 2.0 Single Logout Request [{}] to IdP [{}] !",
+			SamlSingleLogoutController.LOGGER.warn("IdP response is not a valid HTTP Response !",
 					outgoingSaml.getSamlMessage(), idpEntityId);
 		} else if (responseCode == 200) {
 			SamlSingleLogoutController.LOGGER.info("SAML 2.0 Single Logout Request correctly received by IdP [{}] !",
 					idpEntityId);
 		} else {
 			SamlSingleLogoutController.LOGGER.warn(
-					"HTTP response code: [{}] ! Error while sending SAML 2.0 Single Logout Request [{}] to IdP [{}] !",
+					"HTTP response code: [{}] ! IdP rejected our SAML 2.0 Single Logout Request [{}] to IdP [{}] !",
 					new Object[] {responseCode, outgoingSaml.getSamlMessage(), idpEntityId});
 		}
 

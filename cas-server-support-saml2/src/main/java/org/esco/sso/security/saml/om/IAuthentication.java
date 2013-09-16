@@ -18,6 +18,7 @@
  */
 package org.esco.sso.security.saml.om;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +31,7 @@ import org.joda.time.DateTime;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public interface IAuthentication {
+public interface IAuthentication extends Serializable {
 
 	/**
 	 * Get the authentication instant.

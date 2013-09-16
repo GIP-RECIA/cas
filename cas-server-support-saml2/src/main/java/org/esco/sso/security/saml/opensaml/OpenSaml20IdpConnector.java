@@ -23,6 +23,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.esco.cas.ISaml20Facade;
+import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.ISpConfig;
@@ -152,7 +153,9 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 		String tgtId = samlFacade.retrieveTgtIdFromCookie(request);
 		Assert.notNull(tgtId, "CAS TGT Id cannot be null here !");
-		SamlAuthInfo authInfos = samlFacade.retrieveAuthenticationInfosFromCache(tgtId);
+		ISaml20Credentials credentials = samlFacade.retrieveAuthenticationInfosFromCache(tgtId);
+		Assert.notNull(credentials, "SAML credentials cannot be null here !");
+		SamlAuthInfo authInfos = credentials.getAuthenticationInformations();
 		Assert.notNull(authInfos, "SAML auth informations cannot be null here !");
 
 		final LogoutRequest logoutRequest = this.buildLogoutRequest(binding, authInfos);

@@ -28,9 +28,11 @@ import org.apache.commons.logging.LogFactory;
 import org.esco.cas.ISaml20Facade;
 import org.esco.cas.authentication.principal.EmailAddressesCredentials;
 import org.esco.cas.impl.SamlAuthInfo;
+import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.om.IAuthentication;
 import org.esco.sso.security.saml.om.IIncomingSaml;
 import org.esco.sso.security.saml.query.IQuery;
+import org.esco.sso.security.saml.query.impl.QueryAuthnRequest;
 import org.esco.sso.security.saml.query.impl.QueryAuthnResponse;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.web.flow.AbstractNonInteractiveCredentialsAction;
@@ -83,13 +85,18 @@ public class Saml20EmailAuthenticationAction extends AbstractNonInteractiveCrede
 							// If the emailAttribute was found this is our athentication statement
 							credentials = new EmailAddressesCredentials(emailAttributeValues);
 							
+							// MBD FIX 2013-09-12 : SamlAuthInfo IdP entity Id may be null !
 							final SamlAuthInfo authInfos = credentials.getAuthenticationInformations();
-							String idpEntityId = authnResp.getOriginalRequest().getIdpConnectorBuilder()
-									.getIdpConfig().getIdpEntityId();
-							Assert.notNull(idpEntityId, "The IdP entity ID cannot be null here !");
-							authInfos.setIdpEntityId(idpEntityId);
 							authInfos.setIdpSubject(authentication.getSubjectId());
 							authInfos.setSessionIndex(authentication.getSessionIndex());
+							
+							final QueryAuthnRequest originalRequest = authnResp.getOriginalRequest();
+							Assert.notNull(originalRequest, "Original request sould not be null here !");
+							ISaml20IdpConnector idpConnector = originalRequest.getIdpConnectorBuilder();
+							Assert.notNull(idpConnector, "IdP Connector sould not be null here !");
+							final String idpEntityId = idpConnector.getIdpConfig().getIdpEntityId();
+							Assert.notNull(idpEntityId, "The IdP entity ID cannot be null here !");
+							authInfos.setIdpEntityId(idpEntityId);
 							
 							break;
 						}
@@ -143,12 +150,12 @@ public class Saml20EmailAuthenticationAction extends AbstractNonInteractiveCrede
 	 */
 	@Override
 	protected void onSuccess(final RequestContext context, final Credentials credentials) {
-		EmailAddressesCredentials emailCredentials = (EmailAddressesCredentials) credentials;
-		String tgtId = WebUtils.getTicketGrantingTicketId(context);
+		final EmailAddressesCredentials emailCredentials = (EmailAddressesCredentials) credentials;
+		final String tgtId = WebUtils.getTicketGrantingTicketId(context);
 
 		Assert.notNull(tgtId, "The TGT Id cannot be null here !");
 
-		this.saml2Facade.storeAuthenticationInfosInCache(tgtId , emailCredentials.getAuthenticationInformations());
+		this.saml2Facade.storeAuthenticationInfosInCache(tgtId , emailCredentials);
 	}
 
 	@Override

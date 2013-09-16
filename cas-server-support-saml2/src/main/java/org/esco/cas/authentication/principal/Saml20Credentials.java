@@ -33,7 +33,7 @@ public abstract class Saml20Credentials implements ISaml20Credentials {
 	private static final long serialVersionUID = -4366282686714487731L;
 
 	/** Authentication informations. */
-	private transient SamlAuthInfo authenticationInformations;
+	private SamlAuthInfo authenticationInformations;
 
 	/** The principal Id corresponding to the authenticated principal. */
 	private String principalId;
@@ -41,7 +41,6 @@ public abstract class Saml20Credentials implements ISaml20Credentials {
 	public Saml20Credentials() {
 		super();
 		this.authenticationInformations = new SamlAuthInfo();
-		this.authenticationInformations.setAuthCredentials(this);
 	}
 
 	@Override

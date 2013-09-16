@@ -18,11 +18,17 @@
  */
 package org.esco.sso.security.saml.query.impl;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.om.IRequestWaitingForResponse;
+import org.esco.sso.security.saml.util.SamlHelper;
 import org.springframework.util.Assert;
 
 /**
@@ -31,7 +37,7 @@ import org.springframework.util.Assert;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForResponse {
+public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForResponse, Externalizable {
 
 	/** Svuid. */
 	private static final long serialVersionUID = 2263117124596805999L;
@@ -39,6 +45,9 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 	/** Initial CAS request parameters. */
 	private Map<String, String[]> parametersMap;
 
+	/** IdPConnector Id wich we can serialize. */
+	private String idpConnectorId;
+	
 	/** IdpConnector which build this request. */
 	private transient ISaml20IdpConnector idpConnectorBuilder;
 
@@ -50,6 +59,7 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 
 		this.parametersMap = new HashMap<String, String[]>(parametersMap);
 		this.idpConnectorBuilder = idpConnectorBuilder;
+		this.idpConnectorId = idpConnectorBuilder.getIdpConfig().getId();
 	}
 
 	@Override
@@ -59,6 +69,27 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 
 	public Map<String, String[]> getParametersMap() {
 		return this.parametersMap;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
+		this.parametersMap = (Map<String, String[]>) input.readObject();
+		this.idpConnectorId = (String) input.readObject();
+		this.loadIdpConnector(this.idpConnectorId);
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput output) throws IOException {
+		output.writeObject(this.parametersMap);
+		output.writeObject(this.idpConnectorId);
+	}
+	
+	protected void loadIdpConnector(final String idpConnectorId) {
+		final IIdpConfig idpConfig = SamlHelper.getWayfConfig().findIdpConfigById(idpConnectorId);
+		if (idpConfig != null) {
+			this.idpConnectorBuilder = idpConfig.getSaml20IdpConnector();
+		}
 	}
 
 }

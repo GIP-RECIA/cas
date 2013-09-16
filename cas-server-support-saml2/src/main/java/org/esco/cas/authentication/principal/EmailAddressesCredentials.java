@@ -44,7 +44,7 @@ public class EmailAddressesCredentials extends Saml20Credentials {
 
 	@Override
 	public String toString() {
-		return "EmailAddressesCredentials [authenticatedEmailAddress=" + this.authenticatedEmailAddress + "]";
+		return "[email:" + this.authenticatedEmailAddress + "]";
 	}
 
 	/**

@@ -22,7 +22,6 @@ import java.io.Serializable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.esco.cas.authentication.principal.ISaml20Credentials;
 
 /**
  * Informations about SAML 2.0 Authentication.
@@ -39,9 +38,6 @@ public class SamlAuthInfo implements Serializable {
 	@SuppressWarnings("unused")
 	private static final Log LOGGER = LogFactory.getLog(SamlAuthInfo.class);
 
-	/** Credentials used for authentication. */
-	private ISaml20Credentials authCredentials;
-
 	/** Entity Id of the IdP used for authentication. */
 	private String idpEntityId;
 
@@ -57,14 +53,6 @@ public class SamlAuthInfo implements Serializable {
 
 	public void setIdpSubject(final String subjectId) {
 		this.subjectId = subjectId;
-	}
-
-	public ISaml20Credentials getAuthCredentials() {
-		return this.authCredentials;
-	}
-
-	public void setAuthCredentials(final ISaml20Credentials authCredentials) {
-		this.authCredentials = authCredentials;
 	}
 
 	public String getIdpEntityId() {

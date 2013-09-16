@@ -35,6 +35,9 @@ import org.joda.time.DateTime;
  */
 public class BasicSamlAuthentication implements IAuthentication {
 
+	/** Svuid. */
+	private static final long serialVersionUID = 4483119001430907777L;
+
 	/** Is this object locked (immutable) ?. */
 	private boolean locked = false;
 
