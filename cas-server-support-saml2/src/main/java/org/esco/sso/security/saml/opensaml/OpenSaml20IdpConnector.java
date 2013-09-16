@@ -153,7 +153,7 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 		String tgtId = samlFacade.retrieveTgtIdFromCookie(request);
 		Assert.notNull(tgtId, "CAS TGT Id cannot be null here !");
-		ISaml20Credentials credentials = samlFacade.retrieveAuthenticationInfosFromCache(tgtId);
+		ISaml20Credentials credentials = samlFacade.retrieveAuthCredentialsFromCache(tgtId);
 		Assert.notNull(credentials, "SAML credentials cannot be null here !");
 		SamlAuthInfo authInfos = credentials.getAuthenticationInformations();
 		Assert.notNull(authInfos, "SAML auth informations cannot be null here !");

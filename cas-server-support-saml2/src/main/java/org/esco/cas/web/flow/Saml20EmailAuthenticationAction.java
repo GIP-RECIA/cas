@@ -155,7 +155,7 @@ public class Saml20EmailAuthenticationAction extends AbstractNonInteractiveCrede
 
 		Assert.notNull(tgtId, "The TGT Id cannot be null here !");
 
-		this.saml2Facade.storeAuthenticationInfosInCache(tgtId , emailCredentials);
+		this.saml2Facade.storeAuthCredentialsInCache(tgtId , emailCredentials);
 	}
 
 	@Override

@@ -64,7 +64,7 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 	private CookieRetrievingCookieGenerator tgtCookieGenerator;
 
 	@Override
-	public void storeAuthenticationInfosInCache(final String tgtId, final ISaml20Credentials credentials) {
+	public void storeAuthCredentialsInCache(final String tgtId, final ISaml20Credentials credentials) {
 		if (StringUtils.hasText(tgtId) && (credentials != null)) {
 			if (this.saml2AuthenticatedCredentialsCache.isKeyInCache(tgtId)) {
 				// TGT already used !
@@ -81,7 +81,7 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 	}
 
 	@Override
-	public ISaml20Credentials retrieveAuthenticationInfosFromCache(final String tgtId) {
+	public ISaml20Credentials retrieveAuthCredentialsFromCache(final String tgtId) {
 		ISaml20Credentials authInfos = null;
 
 		if (StringUtils.hasText(tgtId)) {
@@ -99,7 +99,7 @@ public class Saml20Facade implements ISaml20Facade, InitializingBean {
 
 	@Override
 	public ISaml20Credentials removeAuthenticationInfosFromCache(final String tgtId) {
-		ISaml20Credentials credentials = this.retrieveAuthenticationInfosFromCache(tgtId);
+		ISaml20Credentials credentials = this.retrieveAuthCredentialsFromCache(tgtId);
 
 		if (StringUtils.hasText(tgtId)) {
 			this.saml2AuthenticatedCredentialsCache.remove(tgtId);

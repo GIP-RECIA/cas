@@ -86,11 +86,11 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 		String tgtId = this.saml2Facade.retrieveTgtIdFromCookie(request);
 
 		if (StringUtils.hasText(tgtId)) {
-			ISaml20Credentials credentials = this.saml2Facade.retrieveAuthenticationInfosFromCache(tgtId);
+			ISaml20Credentials authCreds = this.saml2Facade.retrieveAuthCredentialsFromCache(tgtId);
 			SamlAuthInfo authInfos = null;
 			
 			// MBD FIX 2013-09-12 : SamlAuthInfo IdP entity Id may be null !
-			if (credentials != null && (authInfos = credentials.getAuthenticationInformations()) != null && authInfos.getIdpEntityId() != null) {
+			if (authCreds != null && (authInfos = authCreds.getAuthenticationInformations()) != null && authInfos.getIdpEntityId() != null) {
 				// The user authentified via SAML !
 				ISaml20IdpConnector idpConnector = SamlHelper.findIdpConnectorToUse(
 						authInfos.getIdpEntityId());
@@ -121,7 +121,7 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 				}
 
 			} else {
-				LOGGER.warn("Unable to retrieve Authentication informations from Cache. " +
+				LOGGER.warn("Unable to retrieve Authentication credentials from Cache, the authentication may be outdated ? " +
 						"We cannot send a logout URL to the IdP. You may have a problem with your Cache configuration.");
 			}
 		}
@@ -144,7 +144,7 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 		IOUtils.copy(responseStream, writer, "UTF-8");
 		String response = writer.toString();
 
-		SamlSingleLogoutController.LOGGER.debug("HTTP response to SLO Request which will be send: [{}] ", response);
+		SamlSingleLogoutController.LOGGER.debug("HTTP response to SLO Request which was send: [{}] ", response);
 
 		int responseCode = logoutConnection.getResponseCode();
 

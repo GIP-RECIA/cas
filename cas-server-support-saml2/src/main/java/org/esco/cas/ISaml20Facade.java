@@ -34,7 +34,7 @@ public interface ISaml20Facade {
 	 * @param tgtId the user's TGT Id
 	 * @param credentials the user Credentials
 	 */
-	void storeAuthenticationInfosInCache(String tgtId, ISaml20Credentials credentials);
+	void storeAuthCredentialsInCache(String tgtId, ISaml20Credentials credentials);
 
 	/**
 	 * Retrieve SAML 2.0 credentials of a TGT user.
@@ -42,7 +42,7 @@ public interface ISaml20Facade {
 	 * @param tgtId the user's TGT Id
 	 * @return the user Credentials
 	 */
-	ISaml20Credentials retrieveAuthenticationInfosFromCache(String tgtId);
+	ISaml20Credentials retrieveAuthCredentialsFromCache(String tgtId);
 
 
 	/**
