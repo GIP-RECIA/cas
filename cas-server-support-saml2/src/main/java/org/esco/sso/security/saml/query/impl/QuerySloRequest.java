@@ -18,10 +18,7 @@
  */
 package org.esco.sso.security.saml.query.impl;
 
-import java.io.Externalizable;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
@@ -34,19 +31,20 @@ import org.esco.sso.security.saml.util.SamlHelper;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class QuerySloRequest extends SamlQuery implements IRequestWaitingForResponse, Externalizable {
+public class QuerySloRequest extends SamlQuery implements IRequestWaitingForResponse {
 
 	/** Svuid. */
 	private static final long serialVersionUID = 1081464086973460157L;
 
 	/** IdPConnector Id wich we can serialize. */
-	private String idpConnectorId;
+	private String idpConnectorConfigId;
 	
 	private transient ISaml20IdpConnector idpConnectorBuilder;
 
 	public QuerySloRequest(final String id, final ISaml20IdpConnector idpConnectorBuilder) {
 		super(id);
 		this.idpConnectorBuilder = idpConnectorBuilder;
+		this.idpConnectorConfigId = idpConnectorBuilder.getIdpConfig().getId();
 	}
 
 	@Override
@@ -54,16 +52,13 @@ public class QuerySloRequest extends SamlQuery implements IRequestWaitingForResp
 		return this.idpConnectorBuilder;
 	}
 
-
-	@Override
-	public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
-		this.idpConnectorId = (String) input.readObject();
-		this.loadIdpConnector(this.idpConnectorId);
+	private void readObject(java.io.ObjectInputStream  input) throws IOException, ClassNotFoundException {
+		this.idpConnectorConfigId = (String) input.readObject();
+		this.loadIdpConnector(this.idpConnectorConfigId);
 	}
 
-	@Override
-	public void writeExternal(ObjectOutput output) throws IOException {
-		output.writeObject(this.idpConnectorId);
+	private void writeObject(java.io.ObjectOutputStream output) throws IOException {
+		output.writeObject(this.idpConnectorConfigId);
 	}
 	
 	protected void loadIdpConnector(final String idpConnectorId) {

@@ -18,10 +18,7 @@
  */
 package org.esco.sso.security.saml.query.impl;
 
-import java.io.Externalizable;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,7 +34,7 @@ import org.springframework.util.Assert;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForResponse, Externalizable {
+public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForResponse {
 
 	/** Svuid. */
 	private static final long serialVersionUID = 2263117124596805999L;
@@ -46,7 +43,7 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 	private Map<String, String[]> parametersMap;
 
 	/** IdPConnector Id wich we can serialize. */
-	private String idpConnectorId;
+	private String idpConnectorConfigId;
 	
 	/** IdpConnector which build this request. */
 	private transient ISaml20IdpConnector idpConnectorBuilder;
@@ -59,7 +56,7 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 
 		this.parametersMap = new HashMap<String, String[]>(parametersMap);
 		this.idpConnectorBuilder = idpConnectorBuilder;
-		this.idpConnectorId = idpConnectorBuilder.getIdpConfig().getId();
+		this.idpConnectorConfigId = idpConnectorBuilder.getIdpConfig().getId();
 	}
 
 	@Override
@@ -71,18 +68,18 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 		return this.parametersMap;
 	}
 
-	@Override
 	@SuppressWarnings("unchecked")
-	public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
+	private void readObject(java.io.ObjectInputStream input)
+            throws IOException, ClassNotFoundException {
 		this.parametersMap = (Map<String, String[]>) input.readObject();
-		this.idpConnectorId = (String) input.readObject();
-		this.loadIdpConnector(this.idpConnectorId);
+		this.idpConnectorConfigId = (String) input.readObject();
+		this.loadIdpConnector(this.idpConnectorConfigId);
 	}
 
-	@Override
-	public void writeExternal(ObjectOutput output) throws IOException {
+	private void writeObject(java.io.ObjectOutputStream output)
+            throws IOException {
 		output.writeObject(this.parametersMap);
-		output.writeObject(this.idpConnectorId);
+		output.writeObject(this.idpConnectorConfigId);
 	}
 	
 	protected void loadIdpConnector(final String idpConnectorId) {
