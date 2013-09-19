@@ -120,9 +120,6 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 					SamlSingleLogoutController.LOGGER.debug("Error while sending SLO Request !", e);
 				}
 
-			} else {
-				LOGGER.warn("Unable to retrieve Authentication credentials from Cache, the authentication may be outdated ? " +
-						"We cannot send a logout URL to the IdP. You may have a problem with your Cache configuration.");
 			}
 		}
 

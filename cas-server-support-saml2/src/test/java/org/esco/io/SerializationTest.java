@@ -11,10 +11,10 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.esco.cas.authentication.handler.EmailAddressesAuthenticationStatusEnum;
 import org.esco.cas.authentication.principal.EmailAddressesCredentials;
@@ -161,7 +161,7 @@ public class SerializationTest {
 		String key2 = PARAM_KEY_2;
 		String[] value1 = new String[]{PARAM_VALUE_1_1, PARAM_VALUE_1_2};
 		String[] value2 = new String[]{PARAM_VALUE_2_1};
-		Map<String, String[]> parametersMap = new TreeMap<String, String[]>();
+		Map<String, String[]> parametersMap = new HashMap<String, String[]>();
 		parametersMap.put(key1, value1);
 		parametersMap.put(key2, value2);
 		parametersMap = Collections.unmodifiableMap(parametersMap);
