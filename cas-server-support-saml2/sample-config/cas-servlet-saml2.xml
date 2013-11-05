@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+		
+	<description>
+		CAS Action (servlet) configuration for SAML2.0 support.
+	</description>
+
+	<import resource="spAndIdpConfigContext.xml"/>
+	<import resource="wayfConfigContext.xml"/>
+
+	<bean id="saml20Facade" class="org.esco.cas.impl.Saml20Facade">
+		<property name="tgtCookieGenerator" ref="ticketGrantingTicketCookieGenerator" />
+	</bean>
+
+	<bean id="saml20EmailAuthenticationAction" class="org.esco.cas.web.flow.Saml20EmailAuthenticationAction">
+		<property name="centralAuthenticationService" ref="centralAuthenticationService" />
+		<property name="emailAttributeFriendlyName" value="${saml.email.friendlyName}" />
+		<property name="saml2Facade" ref="saml20Facade" />
+	</bean>		
+	
+	<bean id="saml20SingleLogoutController" class="org.esco.cas.web.SamlSingleLogoutController">
+		<property name="logoutController" ref="logoutController" />
+		<property name="saml2Facade" ref="saml20Facade" />
+		
+		<!-- Don't redirect the browser to IdP for SLO -->
+		<property name="singleLogoutSilently" value="true" />
+		
+		<property name="idpsLogoutUrlIframeCall" value="${cas.saml2.idps.logoutUrls}" />
+		<property name="singleLogoutUrlIframeCall" value="${cas.saml2.slo.logoutUrls}" />
+	</bean>		
+			
+	<!-- MBD: ajout de l'action d'initialisation du wayf -->
+	<bean id="initWayfAction" class="org.esco.cas.web.flow.InitWayfAction" />
+			
+	<!-- MBD: ajout de l'action de redirection wayf -->
+	<bean id="wayfRedirectionAction" class="org.esco.cas.web.flow.WayfRedirectionAction"
+		p:wayfConfig-ref="wayfConfiguration" />		
+		
+</beans>

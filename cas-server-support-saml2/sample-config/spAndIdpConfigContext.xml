@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+	<description>
+		Service Providers and Identity Providers configuration.
+	</description>
+
+	<import resource="./wayfConfigContext.xml" />
+
+	<!-- Query Processors Config - START -->
+	
+	<bean id="authnRespQueryProcessor" class="org.esco.sso.security.saml.opensaml.query.AuthnResponseQueryProcessor" scope="prototype">
+		<property name="endpointLocation" value="${cas.uri}/Shibboleth.sso/SAML2" />
+	</bean>
+	
+	<bean id="sloRespQueryProcessor" class="org.esco.sso.security.saml.opensaml.query.SloResponseQueryProcessor" scope="prototype">
+		<property name="endpointLocation" value="${cas.uri}/Shibboleth.sso/SLO" />
+	</bean>
+
+	<bean id="sloReqQueryProcessor" class="org.esco.sso.security.saml.opensaml.query.SloRequestQueryProcessor" scope="prototype">
+		<property name="endpointLocation" value="${cas.uri}/Shibboleth.sso/SLO" />
+	</bean>
+
+	<bean id="queryProcessorFactory" class="org.esco.sso.security.saml.opensaml.query.OpenSaml2QueryProcessorFactory">
+		<property name="clockSkewSeconds" value="60" />
+		<property name="samlMessageDecoders" ref="samlMessageDecoders" />
+		<property name="signatureValidator" ref="samlSignatureProfileValidator" />
+		<property name="allowDecodingSecurityException" value="false" />
+		
+		<property name="processorConfiguration">
+			<map>
+				<entry key="Response" value="authnRespQueryProcessor" />
+				<entry key="LogoutResponse" value="sloRespQueryProcessor" />
+				<entry key="LogoutRequest" value="sloReqQueryProcessor" />
+			</map>
+		</property>
+		<property name="bindingConfiguration">
+			<map>
+				<entry key="Redirect" value="SAML_20_HTTP_REDIRECT" />
+				<entry key="POST" value="SAML_20_HTTP_POST" />
+			</map>
+		</property>
+	</bean>
+	
+	<bean id="samlSignatureProfileValidator" class="org.opensaml.security.SAMLSignatureProfileValidator" />
+
+	<util:map id="samlMessageDecoders">
+		<entry key="SAML_20_HTTP_POST">
+			<bean class="org.opensaml.saml2.binding.decoding.HTTPPostDecoder" />
+		</entry>
+		<entry key="SAML_20_HTTP_REDIRECT">
+			<bean
+				class="org.opensaml.saml2.binding.decoding.HTTPRedirectDeflateDecoder" />
+		</entry>
+	</util:map>
+
+	<!-- Query Processors Config - END -->
+	
+	<!-- Service Provider config - START -->
+	
+	<bean id="sp1Config" class="org.esco.sso.security.impl.CasSpConfig">
+		<property name="id" value="sp1Config" />
+		<property name="entityId" value="${cas.saml2.sp1.entityId}" />
+		<property name="spMetadata" value="${cas.saml2.sp1.metadata.resource}" />
+		<property name="description" value="First Service Provider inside CAS." />
+
+		<property name="decryptionKeyResource" value="${cas.saml2.sp1.decryptKey.resource}" />
+		<property name="decryptionKeySpec" value="${cas.saml2.sp1.decryptKey.spec}" />
+		<property name="decryptionKeyType" value="${cas.saml2.sp1.decryptKey.type}" />
+
+		<property name="signingKeyResource" value="${cas.saml2.sp1.signKey.resource}" />
+		<property name="signingKeySpec" value="${cas.saml2.sp1.signKey.spec}" />
+		<property name="signingKeyType" value="${cas.saml2.sp1.signKey.type}" />
+	</bean>
+	
+	<bean id="sp1Processor"
+		class="org.esco.sso.security.saml.opensaml.OpenSaml20SpProcessor">
+		<property name="spConfig" ref="sp1Config" />
+		<property name="queryProcessorFactory" ref="queryProcessorFactory" />
+		<property name="cas" ref="centralAuthenticationService" />
+		<property name="samlFacade" ref="saml20Facade" />
+
+		<property name="idpConnectors">
+			<list>
+				<ref bean="externalIdpConfig" />
+			</list>
+		</property>
+	</bean>
+	
+	<!-- Service Provider config - END -->
+
+	<!-- Identity Providers config - START -->
+
+	<bean id="casIdpConfig" class="org.esco.sso.security.impl.CasIdpConfig"
+		p:id="0" p:description="idp.description.cas" p:pictureUrl="${cas.saml2.casIdp.pictureUrl}" />
+
+	<bean id="externalIdpConfig" class="org.esco.sso.security.impl.BasicIdpConfig">
+		<property name="id" value="catel-IdP" />
+		<property name="description" value="idp.description.external" />
+		<property name="pictureUrl" value="${cas.saml2.idp1.picture.url}" />
+
+		<property name="forceAuthentication" value="true" />
+		<property name="requestBinding" value="SAML_20_HTTP_REDIRECT" />
+		<property name="responseBinding" value="SAML_20_HTTP_POST" />
+		<property name="attributeConsumingServiceIndex" value="1" />
+
+		<property name="idpEntityId" value="${cas.saml2.idp1.entityId}" />
+		<property name="idpMetadata" value="${cas.saml2.idp1.metadata.resource}" />
+	</bean>
+
+	<!-- Identity Providers config - END -->
+
+	<!-- Identity Providers Connectors config - START -->
+
+	<bean id="externalIdpConnector"
+		class="org.esco.sso.security.saml.opensaml.OpenSaml20IdpConnector">
+		<property name="idpConfig" ref="externalIdpConfig" />
+	
+		<!-- Optionnal if need to adapt the SAML 2.0 connexions. Not needed with shibboleth. -->
+		<!--	
+		<property name="dataAdaptor">
+			<bean class="org.esco.sso.security.saml.CatelSamlDataAdaptor">
+				<property name="rsaEndpointUrl" value="${cas.saml2.idp1.rsaEndpointUrl}" />
+			</bean>
+		</property>
+		-->
+	</bean>
+
+	<!-- Identity Providers Connectors config - END -->
+
+</beans>
