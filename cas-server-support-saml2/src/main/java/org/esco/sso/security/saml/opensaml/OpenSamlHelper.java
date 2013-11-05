@@ -34,6 +34,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.esco.sso.security.saml.SamlBindingEnum;
 import org.esco.sso.security.saml.util.SamlHelper;
+import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.IdentifierGenerator;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.impl.SecureRandomIdentifierGenerator;
@@ -41,6 +42,7 @@ import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
 import org.opensaml.saml2.metadata.provider.ResourceBackedMetadataProvider;
 import org.opensaml.xml.Configuration;
+import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallingException;
@@ -71,6 +73,12 @@ public abstract class OpenSamlHelper {
 	private static IdentifierGenerator idGenerator;
 
 	static {
+		try {
+			DefaultBootstrap.bootstrap();
+		} catch (ConfigurationException e) {
+			OpenSamlHelper.LOGGER.error("Unable to configure OpenSAML !", e);
+		}
+
 		try {
 			OpenSamlHelper.idGenerator = new SecureRandomIdentifierGenerator();
 		} catch (NoSuchAlgorithmException e) {

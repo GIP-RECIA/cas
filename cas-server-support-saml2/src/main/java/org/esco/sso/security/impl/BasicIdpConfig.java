@@ -217,8 +217,6 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	XMLParserException, ConfigurationException {
 		BasicIdpConfig.LOGGER.debug("Precessing metadata of IdP with Id: [{}]...", this.id);
 
-		DefaultBootstrap.bootstrap();
-
 		this.idpMetadataProvider = OpenSamlHelper.buildMetadataProvider(this.idpMetadata);
 		Assert.notNull(this.idpMetadataProvider, "IdP metadata provider wasn't build !");
 		BasicIdpConfig.LOGGER.debug("IdP metadata provider ref: [{}].", this.idpMetadataProvider);
