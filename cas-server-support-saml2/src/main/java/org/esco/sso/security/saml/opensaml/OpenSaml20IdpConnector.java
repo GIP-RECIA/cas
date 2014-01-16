@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.esco.cas.ISaml20Facade;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
+import org.esco.cas.authentication.principal.Saml20Credentials;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.ISpConfig;
@@ -99,7 +100,10 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 	/** SAML data adaptor. Configure the shape of SAML datas in HTTP request. */
 	private ISamlDataAdaptor dataAdaptor;
-
+	
+	/** Instantiation to the highest level of credential object. */
+	private Class<? extends ISaml20Credentials> credentialsType = Saml20Credentials.class;
+	
 	private AuthnContextClassRefBuilder authnContextClassRefBuilder = new AuthnContextClassRefBuilder();
 
 	private RequestedAuthnContextBuilder requestedAuthnContextBuilder = new RequestedAuthnContextBuilder();
@@ -138,7 +142,7 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 			throw new SamlBuildingException("Unable to build SAML 2.0 AuthnRequest !", e);
 		} catch (SignatureException e) {
 			throw new SamlBuildingException("Unable to sign SAML 2.0 AuthnRequest !", e);
-		}
+	    }
 
 		return outgoingSaml;
 	}
@@ -259,7 +263,6 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 			this.logger.debug(String.format("Random RelayState: %s", relayState));
 		}
 
-		// MBD bug : Forgot to sign the SAML Object
 		// Xml outgoing message
 		final String xmlOutgoingMsg;
 		if (SignableSAMLObject.class.isAssignableFrom(samlObject.getClass())) {
@@ -493,6 +496,7 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 			this.dataAdaptor = new BasicSamlDataAdaptor();
 		}
 
+		Assert.isAssignable(ISaml20Credentials.class, credentialsType, "credentialsType provided must be ISaml20Credentials parent type like EmailAddressesCredentials !");
 	}
 
 	@Override
@@ -506,6 +510,24 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 	public void setDataAdaptor(final ISamlDataAdaptor dataAdaptor) {
 		this.dataAdaptor = dataAdaptor;
+	}
+
+	/**
+	 * Getter of credentialsType.
+	 *
+	 * @return the credentialsType
+	 */
+	public Class<? extends ISaml20Credentials> getCredentialsType() {
+		return credentialsType;
+	}
+
+	/**
+	 * Setter of credentialsType.
+	 *
+	 * @param credentialsType the credentialsType to set
+	 */
+	public void setCredentialsType(Class<? extends ISaml20Credentials> credentialsType) {
+		this.credentialsType = credentialsType;
 	}
 
 }

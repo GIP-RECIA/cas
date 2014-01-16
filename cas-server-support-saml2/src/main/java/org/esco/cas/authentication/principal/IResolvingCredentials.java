@@ -18,50 +18,28 @@
  */
 package org.esco.cas.authentication.principal;
 
-import java.util.List;
-
-import org.esco.cas.impl.SamlAuthInfo;
 import org.jasig.cas.authentication.principal.Credentials;
 
 /**
- * @author GIP RECIA 2012 - Maxime BOSSARD.
+ * Reperesent some already resolved Credentials.
+ * 
+ * @author GIP RECIA 2013 - Maxime BOSSARD.
  *
  */
-public interface ISaml20Credentials extends Credentials {
+public interface IResolvingCredentials extends Credentials {
 
 	/**
-	 * Retrieve the authentication informations.
+	 * Retrieve the principal Id.
 	 * 
-	 * @return the authentication informations
+	 * @return the principal Id
 	 */
-	SamlAuthInfo getAuthenticationInformations();
-
-	/**
-	 * Attribute friendly name.
-	 * 
-	 * @param attributeFriendlyName the Attribute friendly name to set
-	 */
-	void setAttributeFriendlyName(String attributeFriendlyName);
+	String getResolvedPrincipalId();
 	
 	/**
-	 * Attribute friendly name.
+	 * Set the principal Id.
 	 * 
-	 * @return the Attribute friendly name
+	 * @param principalId the principal Id
 	 */
-	String getAttributeFriendlyName();
-	
-	/**
-	 * Attribute values.
-	 * 
-	 * @param attributesList the attribute values to set
-	 */
-	void setAttributeValues(List<String> attributesList);
-	
-	/**
-	 * Attribute values.
-	 * 
-	 * @return the attribute values
-	 */
-	List<String> getAttributeValues();
+	void setResolvedPrincipalId(String principalId);
 
 }

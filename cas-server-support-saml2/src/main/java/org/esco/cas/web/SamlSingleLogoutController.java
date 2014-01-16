@@ -144,7 +144,7 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 		IOUtils.copy(responseStream, writer, "UTF-8");
 		String response = writer.toString();
 
-		SamlSingleLogoutController.LOGGER.debug("HTTP response to SLO Request which was send: [{}] ", response);
+		SamlSingleLogoutController.LOGGER.debug("HTTP response to SLO Request which was sent: [{}] ", response);
 
 		int responseCode = logoutConnection.getResponseCode();
 

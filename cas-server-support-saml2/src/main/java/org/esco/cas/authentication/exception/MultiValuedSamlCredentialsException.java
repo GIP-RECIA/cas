@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package org.esco.cas.authentication.handler;
+package org.esco.cas.authentication.exception;
 
+import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
 
 /**
@@ -24,7 +25,7 @@ import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public final class MultiValuedSamlCredentialsException extends AbstractEmailAddressesSamlCredentialsException {
+public final class MultiValuedSamlCredentialsException extends AbstractSamlCredentialsException {
 
 	/** Static instance of UnsupportedCredentialsException. */
 	public static final UnsupportedCredentialsException ERROR = new UnsupportedCredentialsException();
@@ -33,7 +34,7 @@ public final class MultiValuedSamlCredentialsException extends AbstractEmailAddr
 	private static final long serialVersionUID = 3977861752513837361L;
 
 	/** The code description of this exception. */
-	private static final EmailAddressesAuthenticationStatusEnum STATUS = EmailAddressesAuthenticationStatusEnum.NOT_UNIQUE_EMAIL_CREDENTIAL;
+	private static final AuthenticationStatusEnum STATUS = AuthenticationStatusEnum.NOT_UNIQUE_CREDENTIAL;
 
 	/**
 	 * Default constructor that does not allow the chaining of exceptions and
@@ -44,7 +45,7 @@ public final class MultiValuedSamlCredentialsException extends AbstractEmailAddr
 	}
 
 	@Override
-	public EmailAddressesAuthenticationStatusEnum getStatusCode() {
+	public AuthenticationStatusEnum getStatusCode() {
 		return MultiValuedSamlCredentialsException.STATUS;
 	}
 }

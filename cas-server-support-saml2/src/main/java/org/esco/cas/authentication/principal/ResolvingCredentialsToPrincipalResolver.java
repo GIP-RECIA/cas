@@ -23,34 +23,37 @@ import org.apache.commons.logging.LogFactory;
 import org.jasig.cas.authentication.principal.AbstractPersonDirectoryCredentialsToPrincipalResolver;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 /**
- * Email addresses principal builder via LDAP.
+ * Principal Resolver for self resolved IResolvingCredentials.
  * 
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class EmailAddressesCredentialsToPrincipalResolver extends AbstractPersonDirectoryCredentialsToPrincipalResolver {
+public class ResolvingCredentialsToPrincipalResolver extends AbstractPersonDirectoryCredentialsToPrincipalResolver {
 
 	/** Logger. */
-	private static final Log LOGGER = LogFactory.getLog(EmailAddressesCredentialsToPrincipalResolver.class);
+	private static final Log LOGGER = LogFactory.getLog(ResolvingCredentialsToPrincipalResolver.class);
 
+	/** {@inheritDoc} */
 	@Override
 	public boolean supports(final Credentials credentials) {
-		return (credentials != null) && (credentials instanceof EmailAddressesCredentials);
+		return (credentials != null) && (IResolvingCredentials.class.isAssignableFrom(credentials.getClass()));
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	protected String extractPrincipalId(final Credentials credentials) {
-		EmailAddressesCredentials emailCredentials = (EmailAddressesCredentials) credentials;
+		IResolvingCredentials resolvingCreds = (IResolvingCredentials) credentials;
 
-		String principalId = emailCredentials.getPrincipalId();
-		Assert.isTrue(StringUtils.hasText(principalId), "The principal Id wasn't populate by the LdapEmailAddressAuthenticationHandler !");
+		String principalId = resolvingCreds.getResolvedPrincipalId();
+		Assert.hasText(principalId, String.format(
+				"The principal Id wasn't populate in the IResolvingCredentials of type: [%1$s] !",
+				resolvingCreds.getClass().getName()));
 
-		if (EmailAddressesCredentialsToPrincipalResolver.LOGGER.isDebugEnabled()) {
-			EmailAddressesCredentialsToPrincipalResolver.LOGGER.debug(
-					String.format("Resoving principal Id [%1$s].", principalId));
+		if (ResolvingCredentialsToPrincipalResolver.LOGGER.isDebugEnabled()) {
+			ResolvingCredentialsToPrincipalResolver.LOGGER.debug(
+					String.format("Resolved principal Id: [%1$s].", principalId));
 		}
 
 		return principalId;

@@ -120,6 +120,9 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	/** Global Wayf Config. */
 	private IWayfConfig wayfConfig;
 
+	/** Name of the vector attribute in SAML Ticket. */
+	private String friendlyName;
+
 	/**
 	 * Retrieve current HTTP Request.
 	 * 
@@ -290,6 +293,8 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 				String.format("No IdP metadata provided for IdP config with id [%s]!", this.id));
 
 		this.processIdpMetadata();
+		
+		Assert.notNull(this.friendlyName, "No friendlyName provided for IdP connector !");	
 	}
 
 	@Override
@@ -413,4 +418,18 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 		this.idpMetadata = idpMetadata;
 	}
 
+	/** {@inheritDoc} */
+	@Override
+	public String getFriendlyName() {
+		return friendlyName;
+	}
+
+	/**
+	 * fiendlyName.
+	 * @param friendlyName the friendlyName to set
+	 */
+	public void setFriendlyName(String friendlyName) {
+		this.friendlyName = friendlyName;
+	}
+	
 }

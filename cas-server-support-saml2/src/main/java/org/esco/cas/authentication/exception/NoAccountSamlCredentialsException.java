@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package org.esco.cas.authentication.handler;
+package org.esco.cas.authentication.exception;
 
+import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
 
 /**
@@ -24,7 +25,7 @@ import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public final class MultiAccountsSamlCredentialsException extends AbstractEmailAddressesSamlCredentialsException {
+public final class NoAccountSamlCredentialsException extends AbstractSamlCredentialsException {
 
 	/** Static instance of UnsupportedCredentialsException. */
 	public static final UnsupportedCredentialsException ERROR = new UnsupportedCredentialsException();
@@ -33,18 +34,18 @@ public final class MultiAccountsSamlCredentialsException extends AbstractEmailAd
 	private static final long serialVersionUID = 3977861752513837361L;
 
 	/** The code description of this exception. */
-	private static final EmailAddressesAuthenticationStatusEnum STATUS = EmailAddressesAuthenticationStatusEnum.MULTIPLE_ACCOUNTS;
+	private static final AuthenticationStatusEnum STATUS = AuthenticationStatusEnum.NO_ACCOUNT;
 
 	/**
 	 * Default constructor that does not allow the chaining of exceptions and
 	 * uses the default code as the error code for this exception.
 	 */
-	public MultiAccountsSamlCredentialsException() {
-		super(MultiAccountsSamlCredentialsException.STATUS);
+	public NoAccountSamlCredentialsException() {
+		super(NoAccountSamlCredentialsException.STATUS);
 	}
 
 	@Override
-	public EmailAddressesAuthenticationStatusEnum getStatusCode() {
-		return MultiAccountsSamlCredentialsException.STATUS;
+	public AuthenticationStatusEnum getStatusCode() {
+		return NoAccountSamlCredentialsException.STATUS;
 	}
 }

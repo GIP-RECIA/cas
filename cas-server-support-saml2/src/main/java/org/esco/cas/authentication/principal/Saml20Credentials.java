@@ -18,6 +18,7 @@
  */
 package org.esco.cas.authentication.principal;
 
+import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.esco.cas.impl.SamlAuthInfo;
 
 
@@ -27,7 +28,8 @@ import org.esco.cas.impl.SamlAuthInfo;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public abstract class Saml20Credentials implements ISaml20Credentials {
+public class Saml20Credentials extends MultiValuedAttributeCredentials implements ISaml20Credentials, 
+		IInformingCredentials {
 
 	/** SVUID. */
 	private static final long serialVersionUID = -4366282686714487731L;
@@ -35,8 +37,10 @@ public abstract class Saml20Credentials implements ISaml20Credentials {
 	/** Authentication informations. */
 	private SamlAuthInfo authenticationInformations;
 
-	/** The principal Id corresponding to the authenticated principal. */
-	private String principalId;
+	private String attributeFriendlyName;
+	
+	/** The authentication status. */
+	private AuthenticationStatusEnum authenticationStatus;
 
 	public Saml20Credentials() {
 		super();
@@ -44,17 +48,53 @@ public abstract class Saml20Credentials implements ISaml20Credentials {
 	}
 
 	@Override
+	public String toString() {
+		return "Saml20Credentials [friendlyName=" + this.attributeFriendlyName
+				+ ", authenticationStatus=" + authenticationStatus + ", attributeValues=" + super.getAttributeValues() + ", authenticatedValue="
+				+ super.getAuthenticatedValue() + ", resolvedPrincipalId=" + super.getResolvedPrincipalId() + "]";
+	}
+
+	@Override
 	public SamlAuthInfo getAuthenticationInformations() {
 		return this.authenticationInformations;
 	}
 
+	/**
+	 * Getter of attributeFriendlyName.
+	 *
+	 * @return the attributeFriendlyName
+	 */
 	@Override
-	public String getPrincipalId() {
-		return this.principalId;
+	public String getAttributeFriendlyName() {
+		return attributeFriendlyName;
 	}
 
-	public void setPrincipalId(final String principalId) {
-		this.principalId = principalId;
+	/**
+	 * Setter of attributeFriendlyName.
+	 *
+	 * @param attributeFriendlyName the attributeFriendlyName to set
+	 */
+	@Override
+	public void setAttributeFriendlyName(String attributeFriendlyName) {
+		this.attributeFriendlyName = attributeFriendlyName;
+	}
+
+	/**
+	 * The authentication status.
+	 * 
+	 * @return the authentication status
+	 */
+	public AuthenticationStatusEnum getAuthenticationStatus() {
+		return this.authenticationStatus;
+	}
+
+	/**
+	 * The authentication status.
+	 * 
+	 * @param authenticationStatus the authentication status
+	 */
+	public void setAuthenticationStatus(final AuthenticationStatusEnum authenticationStatus) {
+		this.authenticationStatus = authenticationStatus;
 	}
 
 }

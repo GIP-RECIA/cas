@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package org.esco.cas.authentication.handler;
+package org.esco.cas.authentication.exception;
 
+import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
 
 /**
- * Exception thrown when SAML credentials are empty.
+ * Exception thrown when SAML authentication match multiple accounts.
  * 
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public final class EmptySamlCredentialsException extends AbstractEmailAddressesSamlCredentialsException {
+public final class MultiAccountsSamlCredentialsException extends AbstractSamlCredentialsException {
 
 	/** Static instance of UnsupportedCredentialsException. */
 	public static final UnsupportedCredentialsException ERROR = new UnsupportedCredentialsException();
@@ -33,18 +34,18 @@ public final class EmptySamlCredentialsException extends AbstractEmailAddressesS
 	private static final long serialVersionUID = 3977861752513837361L;
 
 	/** The code description of this exception. */
-	private static final EmailAddressesAuthenticationStatusEnum STATUS = EmailAddressesAuthenticationStatusEnum.EMPTY_EMAIL_CREDENTIAL;
+	private static final AuthenticationStatusEnum STATUS = AuthenticationStatusEnum.MULTIPLE_ACCOUNTS;
 
 	/**
 	 * Default constructor that does not allow the chaining of exceptions and
 	 * uses the default code as the error code for this exception.
 	 */
-	public EmptySamlCredentialsException() {
-		super(EmptySamlCredentialsException.STATUS);
+	public MultiAccountsSamlCredentialsException() {
+		super(MultiAccountsSamlCredentialsException.STATUS);
 	}
 
 	@Override
-	public EmailAddressesAuthenticationStatusEnum getStatusCode() {
-		return EmptySamlCredentialsException.STATUS;
+	public AuthenticationStatusEnum getStatusCode() {
+		return MultiAccountsSamlCredentialsException.STATUS;
 	}
 }

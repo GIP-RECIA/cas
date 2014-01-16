@@ -20,6 +20,7 @@ package org.esco.sso.security.saml;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.sso.security.IIdpConfig;
 import org.esco.sso.security.saml.exception.SamlBuildingException;
 import org.esco.sso.security.saml.om.IOutgoingSaml;
@@ -77,5 +78,12 @@ public interface ISaml20IdpConnector {
 	 * @return the IdP configuration
 	 */
 	IIdpConfig getIdpConfig();
-
+	
+	/**
+	 * Retrieve the credentials linked to the idp.
+	 *
+	 * @return the credentials.
+	 */
+	Class<? extends ISaml20Credentials> getCredentialsType();
+	
 }

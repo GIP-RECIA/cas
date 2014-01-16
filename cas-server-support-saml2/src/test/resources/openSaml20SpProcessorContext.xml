@@ -75,6 +75,8 @@
 
 		<property name="idpEntityId" value="http://www.recia.fr/idp" />
 		<property name="idpMetadata" ref="idpMetadata" />
+		
+		<property name="friendlyName" value="ctemail" />
 	</bean>
 
 	<bean id="idpConnector"

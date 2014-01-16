@@ -41,7 +41,7 @@ import org.springframework.util.StringUtils;
  * <li>SAMLRequest</li>
  * <li>RelayState</li>
  * </ul>
- * 
+ *
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
@@ -52,7 +52,7 @@ public class BasicSamlDataAdaptor implements ISamlDataAdaptor {
 
 	/**
 	 * Retrieve the HTTP param name which will represent the SAML message.
-	 * 
+	 *
 	 * @param outgoingData
 	 * @return the HTTP param name
 	 */

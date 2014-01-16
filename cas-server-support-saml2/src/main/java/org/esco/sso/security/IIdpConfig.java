@@ -117,4 +117,12 @@ public interface IIdpConfig extends Serializable {
 	String getIdpSsoEndpointUrl(SamlBindingEnum binding);
 
 	String getIdpSloEndpointUrl(SamlBindingEnum binding);
+	
+	/**
+	 * Retrieve Name of the vector attribute in SAML Ticket from the IDP.
+	 *
+	 * @return the friendlyName
+	 */
+	String getFriendlyName();
+	
 }

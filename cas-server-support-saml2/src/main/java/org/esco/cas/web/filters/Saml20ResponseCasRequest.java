@@ -28,7 +28,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.esco.cas.web.flow.Saml20EmailAuthenticationAction;
+import org.esco.cas.web.flow.Saml20AuthenticationAction;
 import org.esco.sso.security.saml.ISaml20SpProcessor;
 import org.esco.sso.security.saml.exception.SamlProcessingException;
 import org.esco.sso.security.saml.exception.UnsupportedSamlOperation;
@@ -96,7 +96,7 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 			// Lock the map.
 			this.parameters = MapUtils.unmodifiableMap(this.parameters);
 
-			this.setAttribute(Saml20EmailAuthenticationAction.SAML_RESPONSE_DATA_FLOW_SCOPE_KEY,
+			this.setAttribute(Saml20AuthenticationAction.SAML_RESPONSE_DATA_FLOW_SCOPE_KEY,
 					this.samlIncomingMsg);
 		}
 	}

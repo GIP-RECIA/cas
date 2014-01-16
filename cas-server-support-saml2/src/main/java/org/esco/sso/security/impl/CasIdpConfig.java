@@ -184,4 +184,10 @@ public class CasIdpConfig implements IIdpConfig {
 		throw new IllegalAccessError("This method must not be called !");
 	}
 
+	@Override
+	public String getFriendlyName() {
+		// Never used for CAS  IdP config !
+		throw new IllegalAccessError("This method must not be called !");
+	}
+
 }
