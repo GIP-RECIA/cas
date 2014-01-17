@@ -3,7 +3,7 @@
  */
 package org.esco.cas.authentication.handler.support;
 
-import org.esco.cas.authentication.exception.AbstractSamlCredentialsException;
+import org.esco.cas.authentication.exception.AbstractCredentialsException;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.jasig.cas.authentication.principal.Credentials;
 
@@ -19,7 +19,7 @@ import org.jasig.cas.authentication.principal.Credentials;
  */
 public interface ISaml20CredentialsHandler<T extends ISaml20Credentials, V extends Credentials> {
 
-	boolean validate(T credentials) throws AbstractSamlCredentialsException;
+	boolean validate(T credentials) throws AbstractCredentialsException;
 	
 	V adapt(T credentials);
 	

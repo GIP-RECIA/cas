@@ -5,9 +5,9 @@ package org.esco.cas.authentication.handler.support;
 
 import java.util.List;
 
-import org.esco.cas.authentication.exception.AbstractSamlCredentialsException;
-import org.esco.cas.authentication.exception.EmptySamlCredentialsException;
-import org.esco.cas.authentication.exception.MultiValuedSamlCredentialsException;
+import org.esco.cas.authentication.exception.AbstractCredentialsException;
+import org.esco.cas.authentication.exception.EmptyCredentialsException;
+import org.esco.cas.authentication.exception.MultiValuedCredentialsException;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
 import org.esco.cas.authentication.principal.Saml20Credentials;
 import org.springframework.util.CollectionUtils;
@@ -23,17 +23,17 @@ import org.springframework.util.CollectionUtils;
 public class MonoValuedSaml20CredentialsHandler implements ISaml20CredentialsHandler<Saml20Credentials, MultiValuedAttributeCredentials> {
 
 	@Override
-	public boolean validate(Saml20Credentials credentials) throws AbstractSamlCredentialsException {
+	public boolean validate(Saml20Credentials credentials) throws AbstractCredentialsException {
 		final List<String> attributes = credentials.getAttributeValues();
 
 		if (CollectionUtils.isEmpty(attributes)) {
 			// Empty credentials are not supported !
-			throw new EmptySamlCredentialsException();
+			throw new EmptyCredentialsException();
 		}
 
 		if (attributes.size() > 1) {
 			// Multi valued credentials are not supported !
-			throw new MultiValuedSamlCredentialsException();
+			throw new MultiValuedCredentialsException();
 		}
 		
 		return true;

@@ -20,12 +20,12 @@ import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
 
 /**
- * Exception thrown when SAML authentication match multiple accounts.
+ * Exception thrown when authentication match multiple accounts.
  * 
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public final class MultiAccountsSamlCredentialsException extends AbstractSamlCredentialsException {
+public final class MultiAccountsCredentialsException extends AbstractCredentialsException {
 
 	/** Static instance of UnsupportedCredentialsException. */
 	public static final UnsupportedCredentialsException ERROR = new UnsupportedCredentialsException();
@@ -40,12 +40,12 @@ public final class MultiAccountsSamlCredentialsException extends AbstractSamlCre
 	 * Default constructor that does not allow the chaining of exceptions and
 	 * uses the default code as the error code for this exception.
 	 */
-	public MultiAccountsSamlCredentialsException() {
-		super(MultiAccountsSamlCredentialsException.STATUS);
+	public MultiAccountsCredentialsException() {
+		super(MultiAccountsCredentialsException.STATUS);
 	}
 
 	@Override
 	public AuthenticationStatusEnum getStatusCode() {
-		return MultiAccountsSamlCredentialsException.STATUS;
+		return MultiAccountsCredentialsException.STATUS;
 	}
 }

@@ -20,12 +20,12 @@ import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.jasig.cas.authentication.handler.UnsupportedCredentialsException;
 
 /**
- * Exception thrown when SAML multi valued credentials are unsupported.
+ * Exception thrown when credentials are empty.
  * 
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public final class MultiValuedSamlCredentialsException extends AbstractSamlCredentialsException {
+public final class EmptyCredentialsException extends AbstractCredentialsException {
 
 	/** Static instance of UnsupportedCredentialsException. */
 	public static final UnsupportedCredentialsException ERROR = new UnsupportedCredentialsException();
@@ -34,18 +34,18 @@ public final class MultiValuedSamlCredentialsException extends AbstractSamlCrede
 	private static final long serialVersionUID = 3977861752513837361L;
 
 	/** The code description of this exception. */
-	private static final AuthenticationStatusEnum STATUS = AuthenticationStatusEnum.NOT_UNIQUE_CREDENTIAL;
+	private static final AuthenticationStatusEnum STATUS = AuthenticationStatusEnum.EMPTY_CREDENTIAL;
 
 	/**
 	 * Default constructor that does not allow the chaining of exceptions and
 	 * uses the default code as the error code for this exception.
 	 */
-	public MultiValuedSamlCredentialsException() {
-		super(MultiValuedSamlCredentialsException.STATUS);
+	public EmptyCredentialsException() {
+		super(EmptyCredentialsException.STATUS);
 	}
 
 	@Override
 	public AuthenticationStatusEnum getStatusCode() {
-		return MultiValuedSamlCredentialsException.STATUS;
+		return EmptyCredentialsException.STATUS;
 	}
 }

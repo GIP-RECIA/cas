@@ -24,8 +24,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.esco.cas.authentication.exception.AbstractSamlCredentialsException;
-import org.esco.cas.authentication.exception.NoAccountSamlCredentialsException;
+import org.esco.cas.authentication.exception.AbstractCredentialsException;
+import org.esco.cas.authentication.exception.EmptyCredentialsException;
+import org.esco.cas.authentication.exception.NoAccountCredentialsException;
 import org.esco.cas.authentication.principal.IInformingCredentials;
 import org.esco.cas.authentication.principal.IResolvingCredentials;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
@@ -38,9 +39,9 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * LDAP authentication handler for EmailAddressesCredentials.
+ * LDAP authentication handler managing multiples LDAP filters and multiple different attribute values.
  * 
- * @author GIP RECIA 2012 - Maxime BOSSARD.
+ * @author GIP RECIA 2013 - Maxime BOSSARD.
  *
  */
 public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificationHandler implements InitializingBean {
@@ -70,12 +71,12 @@ public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificati
 			}
 
 			// Default is not authenticated
-			updateAuthenticationStatus(mvCredentials, AuthenticationStatusEnum.NOT_AUTHENTICATED);
+			this.updateAuthenticationStatus(mvCredentials, AuthenticationStatusEnum.NOT_AUTHENTICATED);
 			
 			try {
 				auth = this.authenticateAttributeValuesInternal(mvCredentials);
-			} catch(AbstractSamlCredentialsException e) {
-				updateAuthenticationStatus(mvCredentials, e.getStatusCode());
+			} catch(AbstractCredentialsException e) {
+				this.updateAuthenticationStatus(mvCredentials, e.getStatusCode());
 
 				LdapFiltersAuthenticationHandler.LOGGER.warn(
 						String.format("Error while performing SAML via ldap authentication ! Attributes [%s] produced the following error code : [%s].",
@@ -83,7 +84,7 @@ public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificati
 			}
 
 			if (auth) {
-				updateAuthenticationStatus(mvCredentials, AuthenticationStatusEnum.AUTHENTICATED);
+				this.updateAuthenticationStatus(mvCredentials, AuthenticationStatusEnum.AUTHENTICATED);
 			}
 			
 			if (LdapFiltersAuthenticationHandler.LOGGER.isInfoEnabled()) {
@@ -122,27 +123,34 @@ public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificati
 
 		final List<String> attrValues = credentials.getAttributeValues();
 
-		String attrValue = null;
-		final Iterator<String> valuesIterator = attrValues.iterator();				
-		while (!authenticated && valuesIterator.hasNext()) {
-			attrValue = valuesIterator.next();
-			final Iterator<String> filterIterator = this.authenticationLdapFilters.iterator();
-			while (!authenticated && filterIterator.hasNext()) {
-				final String currentFilter = filterIterator.next();
-				final String filledFilter = LdapUtils.getFilterWithValues(currentFilter, attrValue);
-				final String principalId = this.searchAccount(filledFilter);
-				
-				authenticated = StringUtils.hasText(principalId);
-				if (authenticated && IResolvingCredentials.class.isAssignableFrom(credentials.getClass())) {
-					IResolvingCredentials resolvingCreds = (IResolvingCredentials) credentials;
-					resolvingCreds.setResolvedPrincipalId(principalId);
+		if (!CollectionUtils.isEmpty(attrValues)) {
+			String attrValue = null;
+			final Iterator<String> valuesIterator = attrValues.iterator();				
+			while (!authenticated && valuesIterator.hasNext()) {
+				attrValue = valuesIterator.next();
+				final Iterator<String> filterIterator = this.authenticationLdapFilters.iterator();
+				while (!authenticated && filterIterator.hasNext()) {
+					final String currentFilter = filterIterator.next();
+					final String filledFilter = LdapUtils.getFilterWithValues(currentFilter, attrValue);
+					final String principalId = this.searchAccount(filledFilter);
+					
+					authenticated = StringUtils.hasText(principalId);
+					if (authenticated && IResolvingCredentials.class.isAssignableFrom(credentials.getClass())) {
+						IResolvingCredentials resolvingCreds = (IResolvingCredentials) credentials;
+						resolvingCreds.setResolvedPrincipalId(principalId);
+					}
 				}
 			}
+		} else {
+			// Empty credentials
+			this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.EMPTY_CREDENTIAL);
+			throw new EmptyCredentialsException();
 		}
 
 		if (!authenticated) {
 			// we cannoud found an account linked to the email address
-			throw new NoAccountSamlCredentialsException();
+			this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.NO_ACCOUNT);
+			throw new NoAccountCredentialsException();
 		}
 
 		return authenticated;

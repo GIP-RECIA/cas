@@ -11,7 +11,7 @@ import org.jasig.cas.authentication.handler.AuthenticationException;
  * @param <T>
  *
  */
-public abstract class AbstractSamlCredentialsException extends AuthenticationException {
+public abstract class AbstractCredentialsException extends AuthenticationException {
 
 	/** SVUID. */
 	private static final long serialVersionUID = 502324913010237437L;
@@ -22,7 +22,7 @@ public abstract class AbstractSamlCredentialsException extends AuthenticationExc
 	 * 
 	 * @param throwable the chained exception.
 	 */
-	protected AbstractSamlCredentialsException(final AuthenticationStatusEnum status) {
+	protected AbstractCredentialsException(final AuthenticationStatusEnum status) {
 		super(status.getStatusCode());
 	}
 

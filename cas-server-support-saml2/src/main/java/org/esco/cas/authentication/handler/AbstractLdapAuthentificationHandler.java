@@ -12,7 +12,7 @@ import javax.validation.constraints.NotNull;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.esco.cas.authentication.exception.MultiAccountsSamlCredentialsException;
+import org.esco.cas.authentication.exception.MultiAccountsCredentialsException;
 import org.jasig.cas.authentication.handler.AuthenticationException;
 import org.jasig.cas.authentication.handler.support.AbstractPreAndPostProcessingAuthenticationHandler;
 import org.springframework.ldap.core.AttributesMapper;
@@ -94,7 +94,7 @@ public abstract class AbstractLdapAuthentificationHandler extends AbstractPreAnd
 		if ((results.size() > 1)) {
 			// Multiple accounts binds to LDAP Query
 			LOGGER.warn(String.format("Search for [%s] returned multiple results.", filledFilter));
-			throw new MultiAccountsSamlCredentialsException();
+			throw new MultiAccountsCredentialsException();
 		}
 
 		Attributes uniqueResult = results.iterator().next();
@@ -162,7 +162,7 @@ public abstract class AbstractLdapAuthentificationHandler extends AbstractPreAnd
 	 * 
 	 * @return the Ldap search controls
 	 */
-	protected final  SearchControls getSearchControls() {
+	public  SearchControls getSearchControls() {
 		return this.searchControls;
 	}
 	
@@ -171,7 +171,7 @@ public abstract class AbstractLdapAuthentificationHandler extends AbstractPreAnd
 	 * 
 	 * @return a fully created LdapTemplate.
 	 */
-	protected final LdapTemplate getLdapTemplate() {
+	public LdapTemplate getLdapTemplate() {
 		return this.ldapTemplate;
 	}
 	
@@ -180,11 +180,11 @@ public abstract class AbstractLdapAuthentificationHandler extends AbstractPreAnd
 	 *
 	 * @param ldapTemplate the LDAPTemplate to use.
 	 */	
-	protected final void setLdapTemplate(final LdapTemplate ldapTemplate) {
+	public void setLdapTemplate(final LdapTemplate ldapTemplate) {
 		this.ldapTemplate = ldapTemplate;
 	}
 
-	protected final ContextSource getContextSource() {
+	public ContextSource getContextSource() {
 		return this.contextSource;
 	}	
 
@@ -193,39 +193,39 @@ public abstract class AbstractLdapAuthentificationHandler extends AbstractPreAnd
 	 * 
 	 * @param contextSource the datasource to use.
 	 */
-	public final void setContextSource(final ContextSource contextSource) {
+	public void setContextSource(final ContextSource contextSource) {
 		this.contextSource = contextSource;
 	}
 
-	protected final int getScope() {
+	public int getScope() {
 		return this.scope;
 	}
 
-	public final void setScope(final int scope) {
+	public void setScope(final int scope) {
 		this.scope = scope;
 	}
 
-	protected final int getMaxNumberResults() {
+	public int getMaxNumberResults() {
 		return this.maxNumberResults;
 	}
 
-	public final void setMaxNumberResults(final int maxNumberResults) {
+	public void setMaxNumberResults(final int maxNumberResults) {
 		this.maxNumberResults = maxNumberResults;
 	}
 
-	protected final int getTimeout() {
+	public int getTimeout() {
 		return this.timeout;
 	}
 
-	public final void setTimeout(final int timeout) {
+	public void setTimeout(final int timeout) {
 		this.timeout = timeout;
 	}
 	
-	protected final String getSearchBase() {
+	public String getSearchBase() {
 		return this.searchBase;
 	}
 
-	public final void setSearchBase(final String searchBase) {
+	public void setSearchBase(final String searchBase) {
 		this.searchBase = searchBase;
 	}	
 	
@@ -233,15 +233,15 @@ public abstract class AbstractLdapAuthentificationHandler extends AbstractPreAnd
 	 * Retrieve the subclass principalAttributeName.
 	 * @return principalAttributeName.
 	 */
-	protected final String getPrincipalAttributeName() {
+	public String getPrincipalAttributeName() {
 		return this.principalAttributeName;
 	}
 
-	public final void setPrincipalAttributeName(final String principalAttributeName) {
+	public void setPrincipalAttributeName(final String principalAttributeName) {
 		this.principalAttributeName = principalAttributeName;
 	}
 	
-	public final void setIgnorePartialResultException(final boolean ignorePartialResultException) {
+	public void setIgnorePartialResultException(final boolean ignorePartialResultException) {
 		this.ignorePartialResultException = ignorePartialResultException;
 	}
 

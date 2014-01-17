@@ -16,13 +16,13 @@
 /**
  * 
  */
-package org.esco.cas.authentication;
+package org.esco.cas.authentication.handler;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.esco.cas.authentication.exception.EmptySamlCredentialsException;
-import org.esco.cas.authentication.exception.MultiValuedSamlCredentialsException;
+import org.esco.cas.authentication.exception.EmptyCredentialsException;
+import org.esco.cas.authentication.exception.MultiValuedCredentialsException;
 import org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
 import org.esco.cas.authentication.principal.Saml20Credentials;
@@ -102,15 +102,6 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 		
 		Assert.assertFalse("Credentials should not be authenticated !", performAuth(creds, monoValueHandler));
 	}
-	
-	@Test(expected=MultiValuedSamlCredentialsException.class)
-	public void testBadMultiValuedSamlCreds() throws Exception {
-		Saml20Credentials creds = new Saml20Credentials();
-		creds.setAttributeFriendlyName(ATTR_FRIENDLY_NAME);
-		creds.setAttributeValues(ATTR_MV_VALUES);
-		
-		performAuth(creds, monoValueHandler);
-	}
 
 	@Test
 	public void testNonSamlCreds() throws Exception {
@@ -120,7 +111,11 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 		Assert.assertFalse("Credentials should not be authenticated !", performAuth(creds, monoValueHandler));
 	}
 	
-	@Test(expected=EmptySamlCredentialsException.class)
+	public void testNullSamlCreds() throws Exception {
+		Assert.assertFalse("Credentials should not be authenticated !", performAuth(null, monoValueHandler));
+	}
+	
+	@Test(expected=EmptyCredentialsException.class)
 	public void testEmpty1SamlCreds() throws Exception {
 		Saml20Credentials creds = new Saml20Credentials();
 		creds.setAttributeValues(null);
@@ -128,7 +123,7 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 		performAuth(creds, monoValueHandler);
 	}
 	
-	@Test(expected=EmptySamlCredentialsException.class)
+	@Test(expected=EmptyCredentialsException.class)
 	public void testEmpty2SamlCreds() throws Exception {
 		Saml20Credentials creds = new Saml20Credentials();
 		creds.setAttributeValues(new ArrayList<String>());
@@ -136,6 +131,15 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 		performAuth(creds, monoValueHandler);
 	}
 	
+	@Test(expected=MultiValuedCredentialsException.class)
+	public void testBadMultiValuedSamlCreds() throws Exception {
+		Saml20Credentials creds = new Saml20Credentials();
+		creds.setAttributeFriendlyName(ATTR_FRIENDLY_NAME);
+		creds.setAttributeValues(ATTR_MV_VALUES);
+		
+		performAuth(creds, monoValueHandler);
+	}
+
 	@Test
 	public void testValidMultiValuedSamlCreds() throws Exception {
 		Saml20Credentials creds = new Saml20Credentials();
@@ -145,7 +149,7 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 		Assert.assertTrue("Credentials should be authenticated !", performAuth(creds, multiValueHandler));
 	}
 	
-	protected boolean performAuth(Credentials creds, SamlAttributesAuthenticationHandler handler) throws AuthenticationException {
+	protected boolean performAuth(Credentials creds, AuthenticationHandler handler) throws AuthenticationException {
 		boolean authenticated = false;
 		
 		if (handler.supports(creds)) {
@@ -161,6 +165,12 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 		this.multiValueHandler.setBackingHandler(new SpyingHauthHandler());
 	}
 	
+	/**
+	 * Test Class which mock the backing AuthenticationHandler.
+	 * 
+	 * @author GIP RECIA 2013 - Maxime BOSSARD.
+	 *
+	 */
 	public class SpyingHauthHandler implements AuthenticationHandler {
 
 		@Override

@@ -18,33 +18,48 @@
 -->
 <beans xmlns="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns:p="http://www.springframework.org/schema/p"
-	xmlns:util="http://www.springframework.org/schema/util"
 	xmlns:mockito="http://www.mockito.org/spring/mockito"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
-		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
-		http://www.mockito.org/spring/mockito classpath:spring/mockito.xsd">
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.mockito.org/spring/mockito classpath:spring/mockito.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
     <description>
     	Configuration of authentication handlers.
     </description>
 	
-	 <bean id="handlerSupportingMonoValue" class="org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler">
-	   <property name="backingHandler" ref="mockedAuthHandler" />
-
-	   <property name="samlCredsAdaptator">
-	     <bean class="org.esco.cas.authentication.handler.support.MonoValuedSaml20CredentialsHandler" />
-	   </property>
-	 </bean>
+	<bean id="handlerSupportingMonoValue" class="org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler">
+	  <property name="backingHandler" ref="mockedAuthHandler" />
+	  <property name="samlCredsAdaptator">
+	    <bean class="org.esco.cas.authentication.handler.support.MonoValuedSaml20CredentialsHandler" />
+	  </property>
+	</bean>
 	
-	 <bean id="handlerSupportingMultiValue" class="org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler">
-     <property name="backingHandler" ref="mockedAuthHandler" />
-        
-     <property name="samlCredsAdaptator">
-       <bean class="org.esco.cas.authentication.handler.support.MultiValuedSaml20CredentialsHandler" />
-     </property>
-   </bean>
+  <bean id="handlerSupportingMultiValue" class="org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler">
+    <property name="backingHandler" ref="mockedAuthHandler" />
+    <property name="samlCredsAdaptator">
+      <bean class="org.esco.cas.authentication.handler.support.MultiValuedSaml20CredentialsHandler" />
+    </property>
+  </bean>
    
+  <util:constant id="searchBase" static-field="org.esco.cas.authentication.handler.LdapFiltersAuthenticationHandlerTest.LDAP_SEARCH_BASE"/>
+  <util:constant id="principalAttributeName" static-field="org.esco.cas.authentication.handler.LdapFiltersAuthenticationHandlerTest.LDAP_PRINCIPAL_ATTR_NAME" />
+  <util:constant id="authenticationLdapFilters" static-field="org.esco.cas.authentication.handler.LdapFiltersAuthenticationHandlerTest.LDAP_SEARCH_FILTERS" />
+   
+	<bean id="ldapEmailAddressesAuthenticationHandler" class="org.esco.cas.authentication.handler.LdapFiltersAuthenticationHandler">
+		<property name="contextSource" ref="mockedContextSource" />
+		<property name="ldapTemplate" ref="mockedLdapTemplate" />
+		
+		<property name="timeout" value="5000" />
+		
+		<property name="searchBase" ref="searchBase" />
+		<property name="principalAttributeName" ref="principalAttributeName" />
+		<property name="authenticationLdapFilters" ref="authenticationLdapFilters" />
+	</bean> 
+  
     <!-- Mocked beans -->
   <mockito:mock id="mockedAuthHandler" class="org.jasig.cas.authentication.handler.AuthenticationHandler" />
+  <mockito:mock id="mockedContextSource" class="org.springframework.ldap.core.ContextSource" />
+  <mockito:mock id="mockedLdapTemplate" class="org.springframework.ldap.core.LdapTemplate" />
   
 </beans>

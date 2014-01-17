@@ -21,6 +21,8 @@ package org.esco.cas.authentication.principal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
+
 
 /**
  * Credentials supplied to achieve a multi-valued attribute authentication.
@@ -28,7 +30,7 @@ import java.util.List;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class MultiValuedAttributeCredentials implements IResolvingCredentials {
+public class MultiValuedAttributeCredentials implements IResolvingCredentials, IInformingCredentials {
 
 	/** SVUID. */
 	private static final long serialVersionUID = 7737783560601653027L;
@@ -36,6 +38,9 @@ public class MultiValuedAttributeCredentials implements IResolvingCredentials {
 	/** AttributesList. */
 	private List<String> attributeValues;
 	
+	/** The authentication status. */
+	private AuthenticationStatusEnum authenticationStatus;
+
 	/** Value from the list which permit the athentication. */
 	private String authenticatedValue;
 
@@ -107,6 +112,24 @@ public class MultiValuedAttributeCredentials implements IResolvingCredentials {
 	 */
 	public List<String> getAttributeValues() {
 		return this.attributeValues;
+	}
+
+	/**
+	 * The authentication status.
+	 * 
+	 * @return the authentication status
+	 */
+	public AuthenticationStatusEnum getAuthenticationStatus() {
+		return this.authenticationStatus;
+	}
+
+	/**
+	 * The authentication status.
+	 * 
+	 * @param authenticationStatus the authentication status
+	 */
+	public void setAuthenticationStatus(final AuthenticationStatusEnum authenticationStatus) {
+		this.authenticationStatus = authenticationStatus;
 	}
 
 }

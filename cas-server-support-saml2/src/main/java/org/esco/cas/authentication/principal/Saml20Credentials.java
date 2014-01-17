@@ -18,7 +18,6 @@
  */
 package org.esco.cas.authentication.principal;
 
-import org.esco.cas.authentication.handler.AuthenticationStatusEnum;
 import org.esco.cas.impl.SamlAuthInfo;
 
 
@@ -28,8 +27,7 @@ import org.esco.cas.impl.SamlAuthInfo;
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class Saml20Credentials extends MultiValuedAttributeCredentials implements ISaml20Credentials, 
-		IInformingCredentials {
+public class Saml20Credentials extends MultiValuedAttributeCredentials implements ISaml20Credentials {
 
 	/** SVUID. */
 	private static final long serialVersionUID = -4366282686714487731L;
@@ -38,9 +36,6 @@ public class Saml20Credentials extends MultiValuedAttributeCredentials implement
 	private SamlAuthInfo authenticationInformations;
 
 	private String attributeFriendlyName;
-	
-	/** The authentication status. */
-	private AuthenticationStatusEnum authenticationStatus;
 
 	public Saml20Credentials() {
 		super();
@@ -50,7 +45,7 @@ public class Saml20Credentials extends MultiValuedAttributeCredentials implement
 	@Override
 	public String toString() {
 		return "Saml20Credentials [friendlyName=" + this.attributeFriendlyName
-				+ ", authenticationStatus=" + authenticationStatus + ", attributeValues=" + super.getAttributeValues() + ", authenticatedValue="
+				+ ", authenticationStatus=" + super.getAuthenticationStatus() + ", attributeValues=" + super.getAttributeValues() + ", authenticatedValue="
 				+ super.getAuthenticatedValue() + ", resolvedPrincipalId=" + super.getResolvedPrincipalId() + "]";
 	}
 
@@ -77,24 +72,6 @@ public class Saml20Credentials extends MultiValuedAttributeCredentials implement
 	@Override
 	public void setAttributeFriendlyName(String attributeFriendlyName) {
 		this.attributeFriendlyName = attributeFriendlyName;
-	}
-
-	/**
-	 * The authentication status.
-	 * 
-	 * @return the authentication status
-	 */
-	public AuthenticationStatusEnum getAuthenticationStatus() {
-		return this.authenticationStatus;
-	}
-
-	/**
-	 * The authentication status.
-	 * 
-	 * @param authenticationStatus the authentication status
-	 */
-	public void setAuthenticationStatus(final AuthenticationStatusEnum authenticationStatus) {
-		this.authenticationStatus = authenticationStatus;
 	}
 
 }
