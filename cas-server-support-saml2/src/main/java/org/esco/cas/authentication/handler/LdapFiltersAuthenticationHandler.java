@@ -77,27 +77,17 @@ public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificati
 				auth = this.authenticateAttributeValuesInternal(mvCredentials);
 			} catch(AbstractCredentialsException e) {
 				this.updateAuthenticationStatus(mvCredentials, e.getStatusCode());
-
-				LdapFiltersAuthenticationHandler.LOGGER.warn(
-						String.format("Error while performing SAML via ldap authentication ! Attributes [%s] produced the following error code : [%s].",
-								mvCredentials.getAttributeValues(), e.getStatusCode()));
+				throw e;
 			}
 
 			if (auth) {
 				this.updateAuthenticationStatus(mvCredentials, AuthenticationStatusEnum.AUTHENTICATED);
+				
+				LdapFiltersAuthenticationHandler.LOGGER.info(String.format(
+						"[%s] Successfully authenticated SAML 2.0 Response with attributes: [%s]",
+						this.getName(), mvCredentials.getAttributeValues()));
 			}
-			
-			if (LdapFiltersAuthenticationHandler.LOGGER.isInfoEnabled()) {
-				if (auth) {
-					LdapFiltersAuthenticationHandler.LOGGER.info(String.format(
-							"Successfully authenticated SAML 2.0 Response with attributes: [%s]",
-							mvCredentials.getAttributeValues()));
-				} else {
-					LdapFiltersAuthenticationHandler.LOGGER.info(String.format(
-							"Unable to authenticate SAML 2.0 Response with attributes: [%s]",
-							mvCredentials.getAttributeValues()));
-				}
-			}
+
 		}
 
 		return auth;
@@ -124,20 +114,33 @@ public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificati
 		final List<String> attrValues = credentials.getAttributeValues();
 
 		if (!CollectionUtils.isEmpty(attrValues)) {
-			String attrValue = null;
 			final Iterator<String> valuesIterator = attrValues.iterator();				
 			while (!authenticated && valuesIterator.hasNext()) {
-				attrValue = valuesIterator.next();
+				final String currentValue = valuesIterator.next();
 				final Iterator<String> filterIterator = this.authenticationLdapFilters.iterator();
 				while (!authenticated && filterIterator.hasNext()) {
 					final String currentFilter = filterIterator.next();
-					final String filledFilter = LdapUtils.getFilterWithValues(currentFilter, attrValue);
+					final String filledFilter = LdapUtils.getFilterWithValues(currentFilter, currentValue);
+					
+					if (LdapFiltersAuthenticationHandler.LOGGER.isDebugEnabled()) {
+						LdapFiltersAuthenticationHandler.LOGGER.debug(String.format(
+								"Try to authenticate SAML 2.0 Response with LDAP filter: [%s]", filledFilter));
+					}
+					
 					final String principalId = this.searchAccount(filledFilter);
 					
 					authenticated = StringUtils.hasText(principalId);
-					if (authenticated && IResolvingCredentials.class.isAssignableFrom(credentials.getClass())) {
-						IResolvingCredentials resolvingCreds = (IResolvingCredentials) credentials;
-						resolvingCreds.setResolvedPrincipalId(principalId);
+					if (authenticated) {
+						credentials.setAuthenticatedValue(currentValue);
+						if (IResolvingCredentials.class.isAssignableFrom(credentials.getClass())) {
+							IResolvingCredentials resolvingCreds = (IResolvingCredentials) credentials;
+							resolvingCreds.setResolvedPrincipalId(principalId);
+							
+							if (LdapFiltersAuthenticationHandler.LOGGER.isDebugEnabled()) {
+								LdapFiltersAuthenticationHandler.LOGGER.debug(String.format(
+										"Resolving credentials: [%s]", resolvingCreds.toString()));
+							}
+						}
 					}
 				}
 			}

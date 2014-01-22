@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.esco.sso.security.ISpConfig;
 import org.esco.sso.security.saml.SamlBindingEnum;
 import org.esco.sso.security.saml.opensaml.OpenSamlHelper;
+import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.AttributeConsumingService;
@@ -40,6 +41,7 @@ import org.opensaml.saml2.metadata.provider.MetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
 import org.opensaml.security.MetadataCredentialResolver;
 import org.opensaml.security.MetadataCriteria;
+import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.parse.XMLParserException;
 import org.opensaml.xml.security.Criteria;
 import org.opensaml.xml.security.CriteriaSet;
@@ -136,11 +138,14 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 	 * 
 	 * @throws MetadataProviderException
 	 * @throws XMLParserException
+	 * @throws ConfigurationException 
 	 */
-	protected void processSpMetadata() throws MetadataProviderException, XMLParserException {
+	protected void processSpMetadata() throws MetadataProviderException, XMLParserException, ConfigurationException {
 		Assert.notNull(this.spMetadata, "No SP metadata provided !");
 		Assert.isTrue(this.spMetadata.exists(), String.format(
 				"SP metadata [%s] cannot be found !", this.spMetadata.getFilename()));
+
+		DefaultBootstrap.bootstrap();
 
 		this.spMetadataProvider = OpenSamlHelper.buildMetadataProvider(this.spMetadata);
 		Assert.notNull(this.spMetadataProvider, "SP metadata provider wasn't build !");

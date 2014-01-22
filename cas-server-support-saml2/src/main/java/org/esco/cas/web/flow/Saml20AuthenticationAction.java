@@ -11,7 +11,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.ISaml20Facade;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
-import org.esco.cas.authentication.principal.ImmutableSaml20Credentials;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.om.IAuthentication;
@@ -27,7 +26,7 @@ import org.springframework.webflow.execution.RequestContext;
 /**
  * Retrieve email address authentication credentials from SAML response.
  * 
- * @author GIP RECIA 2012 - Maxime BOSSARD.
+ * @author GIP RECIA 2013 - Maxime BOSSARD.
  * @author BULL - David BREYTON.
  *
  */
@@ -86,7 +85,7 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 				authInfos.setIdpSubject(authentication.getSubjectId());
 				authInfos.setSessionIndex(authentication.getSessionIndex());
 				
-				credentials = new ImmutableSaml20Credentials(saml20Credentials);
+				credentials = saml20Credentials;
 
 				// Put identity vector credentials in flow scope
 				context.getFlowScope().put(Saml20AuthenticationAction.SAML_CREDENTIALS_FLOW_SCOPE_KEY, credentials);

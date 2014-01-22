@@ -21,7 +21,8 @@ package org.esco.cas.authentication.principal;
 import org.jasig.cas.authentication.principal.Credentials;
 
 /**
- * Reperesent some already resolved Credentials.
+ * Reperesent some self resolving Credentials.
+ * This credentials know how to resolve the principalId themselves.
  * 
  * @author GIP RECIA 2013 - Maxime BOSSARD.
  *

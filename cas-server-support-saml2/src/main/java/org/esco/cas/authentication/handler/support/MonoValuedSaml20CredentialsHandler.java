@@ -8,8 +8,8 @@ import java.util.List;
 import org.esco.cas.authentication.exception.AbstractCredentialsException;
 import org.esco.cas.authentication.exception.EmptyCredentialsException;
 import org.esco.cas.authentication.exception.MultiValuedCredentialsException;
+import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
-import org.esco.cas.authentication.principal.Saml20Credentials;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -20,10 +20,10 @@ import org.springframework.util.CollectionUtils;
  * @author GIP RECIA 2013 - Maxime BOSSARD.
  *
  */
-public class MonoValuedSaml20CredentialsHandler implements ISaml20CredentialsHandler<Saml20Credentials, MultiValuedAttributeCredentials> {
+public class MonoValuedSaml20CredentialsHandler implements ISaml20CredentialsHandler<ISaml20Credentials, MultiValuedAttributeCredentials> {
 
 	@Override
-	public boolean validate(Saml20Credentials credentials) throws AbstractCredentialsException {
+	public boolean validate(ISaml20Credentials credentials) throws AbstractCredentialsException {
 		final List<String> attributes = credentials.getAttributeValues();
 
 		if (CollectionUtils.isEmpty(attributes)) {
@@ -40,8 +40,11 @@ public class MonoValuedSaml20CredentialsHandler implements ISaml20CredentialsHan
 	}
 
 	@Override
-	public MultiValuedAttributeCredentials adapt(Saml20Credentials credentials) {
-		return credentials;
+	public MultiValuedAttributeCredentials adapt(ISaml20Credentials credentials) {
+		final MultiValuedAttributeCredentials adapted = new MultiValuedAttributeCredentials();
+		adapted.setAttributeValues(credentials.getAttributeValues());
+		
+		return adapted;
 	}
 
 }

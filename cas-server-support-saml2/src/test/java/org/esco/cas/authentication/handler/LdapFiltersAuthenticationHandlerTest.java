@@ -25,6 +25,9 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchControls;
 
+import org.esco.cas.authentication.exception.EmptyCredentialsException;
+import org.esco.cas.authentication.exception.MultiAccountsCredentialsException;
+import org.esco.cas.authentication.exception.NoAccountCredentialsException;
 import org.esco.cas.authentication.principal.IInformingCredentials;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
 import org.jasig.cas.authentication.handler.AuthenticationException;
@@ -127,7 +130,7 @@ public class LdapFiltersAuthenticationHandlerTest implements InitializingBean {
 		this.assertAuthenticationStatus(creds, AuthenticationStatusEnum.AUTHENTICATED);
 	}
 
-	@Test
+	@Test(expected=NoAccountCredentialsException.class)
 	public void testBadCreds() throws Exception {
 		MultiValuedAttributeCredentials creds = new MultiValuedAttributeCredentials();
 		creds.setAttributeValues(ATTR_BAD_VALUES);
@@ -136,7 +139,7 @@ public class LdapFiltersAuthenticationHandlerTest implements InitializingBean {
 		this.assertAuthenticationStatus(creds, AuthenticationStatusEnum.NO_ACCOUNT);
 	}
 
-	@Test
+	@Test(expected=EmptyCredentialsException.class)
 	public void testEmptyCreds() throws Exception {
 		MultiValuedAttributeCredentials creds = new MultiValuedAttributeCredentials();
 		creds.setAttributeValues(new ArrayList<String>());
@@ -159,7 +162,7 @@ public class LdapFiltersAuthenticationHandlerTest implements InitializingBean {
 		this.assertAuthenticationStatus(creds, AuthenticationStatusEnum.AUTHENTICATED);
 	}
 	
-	@Test
+	@Test(expected=MultiAccountsCredentialsException.class)
 	public void testLdapMultipleAccountsMatching() throws Exception {
 		MultiValuedAttributeCredentials creds = new MultiValuedAttributeCredentials();
 		creds.setAttributeValues(ATTR_BAD_MAM_VALUES);

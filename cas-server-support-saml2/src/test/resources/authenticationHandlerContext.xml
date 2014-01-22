@@ -29,14 +29,24 @@
     </description>
 	
 	<bean id="handlerSupportingMonoValue" class="org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler">
-	  <property name="backingHandler" ref="mockedAuthHandler" />
+	  <property name="name" value="foo" />
+	  <property name="backingHandlers">
+	   <list>
+	     <ref bean="mockedAuthHandler"/>
+	   </list>
+	  </property>
 	  <property name="samlCredsAdaptator">
 	    <bean class="org.esco.cas.authentication.handler.support.MonoValuedSaml20CredentialsHandler" />
 	  </property>
 	</bean>
 	
   <bean id="handlerSupportingMultiValue" class="org.esco.cas.authentication.handler.SamlAttributesAuthenticationHandler">
-    <property name="backingHandler" ref="mockedAuthHandler" />
+    <property name="name" value="bar" />
+    <property name="backingHandlers">
+     <list>
+       <ref bean="mockedAuthHandler"/>
+     </list>
+    </property>
     <property name="samlCredsAdaptator">
       <bean class="org.esco.cas.authentication.handler.support.MultiValuedSaml20CredentialsHandler" />
     </property>
@@ -47,6 +57,7 @@
   <util:constant id="authenticationLdapFilters" static-field="org.esco.cas.authentication.handler.LdapFiltersAuthenticationHandlerTest.LDAP_SEARCH_FILTERS" />
    
 	<bean id="ldapEmailAddressesAuthenticationHandler" class="org.esco.cas.authentication.handler.LdapFiltersAuthenticationHandler">
+		<property name="name" value="baz" />
 		<property name="contextSource" ref="mockedContextSource" />
 		<property name="ldapTemplate" ref="mockedLdapTemplate" />
 		

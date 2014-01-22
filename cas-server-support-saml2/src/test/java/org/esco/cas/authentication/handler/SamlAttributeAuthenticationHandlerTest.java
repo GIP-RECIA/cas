@@ -161,8 +161,11 @@ public class SamlAttributeAuthenticationHandlerTest implements InitializingBean 
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		this.monoValueHandler.setBackingHandler(new SpyingHauthHandler());
-		this.multiValueHandler.setBackingHandler(new SpyingHauthHandler());
+		List<AuthenticationHandler> handlers = new ArrayList<AuthenticationHandler>();
+		handlers.add(new SpyingHauthHandler());
+		
+		this.monoValueHandler.setBackingHandlers(handlers);
+		this.multiValueHandler.setBackingHandlers(handlers);
 	}
 	
 	/**

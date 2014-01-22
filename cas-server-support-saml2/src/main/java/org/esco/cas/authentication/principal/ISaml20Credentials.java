@@ -21,13 +21,12 @@ package org.esco.cas.authentication.principal;
 import java.util.List;
 
 import org.esco.cas.impl.SamlAuthInfo;
-import org.jasig.cas.authentication.principal.Credentials;
 
 /**
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public interface ISaml20Credentials extends Credentials {
+public interface ISaml20Credentials extends IInformingCredentials, IResolvingCredentials {
 
 	/**
 	 * Retrieve the authentication informations.

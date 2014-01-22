@@ -41,7 +41,7 @@ public class MultiValuedAttributeCredentials implements IResolvingCredentials, I
 	/** The authentication status. */
 	private AuthenticationStatusEnum authenticationStatus;
 
-	/** Value from the list which permit the athentication. */
+	/** Value from the list which permit the authentication. */
 	private String authenticatedValue;
 
 	/** The principal Id corresponding to the authenticated principal. */

@@ -18,12 +18,18 @@
  */
 package org.esco.cas.authentication.handler;
 
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.esco.cas.authentication.exception.AuthenticationExceptionList;
 import org.esco.cas.authentication.handler.support.ISaml20CredentialsHandler;
+import org.esco.cas.authentication.principal.IInformingCredentials;
+import org.esco.cas.authentication.principal.IResolvingCredentials;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.jasig.cas.authentication.handler.AuthenticationException;
 import org.jasig.cas.authentication.handler.AuthenticationHandler;
+import org.jasig.cas.authentication.handler.NamedAuthenticationHandler;
 import org.jasig.cas.authentication.handler.support.AbstractPreAndPostProcessingAuthenticationHandler;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.springframework.beans.factory.InitializingBean;
@@ -42,7 +48,7 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 	private static final Log LOGGER = LogFactory.getLog(SamlAttributesAuthenticationHandler.class);
 
 	/** The authentication handler which really handle the authentication. */
-	private AuthenticationHandler backingHandler;
+	private List<AuthenticationHandler> backingHandlers;
 
 	private ISaml20CredentialsHandler<ISaml20Credentials, Credentials> samlCredsAdaptator;
 	
@@ -53,7 +59,7 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 
 	@Override
 	protected boolean doAuthentication(final Credentials credentials) throws AuthenticationException {
-		boolean auth = false;
+		boolean authenticated = false;
 
 		if (credentials != null) {
 			final ISaml20Credentials samlCredentials = (ISaml20Credentials) credentials;
@@ -61,42 +67,98 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 			final boolean validated = this.samlCredsAdaptator.validate(samlCredentials);
 			
 			if (validated) {
-				final Credentials adaptedCreds = this.samlCredsAdaptator.adapt(samlCredentials);
-				if (this.backingHandler.supports(adaptedCreds)) {
-					auth = this.backingHandler.authenticate(adaptedCreds);
-				} else {
-					LOGGER.warn(String.format("Backing AuthenticationHandler of type: [%1$s] doesn't supports " +
-							"SAML adapted Credentials of type: [%2$s] !", 
-							this.backingHandler.getClass().getName(), adaptedCreds.getClass().getName()));
+				final StringBuilder sbErrorMsg = new StringBuilder(256);
+				final AuthenticationExceptionList errorList = new AuthenticationExceptionList();
+				
+				for (AuthenticationHandler handler : this.backingHandlers) {
+					final Credentials adaptedCreds = this.samlCredsAdaptator.adapt(samlCredentials);
+					if (handler.supports(adaptedCreds)) {
+						try {
+							authenticated = handler.authenticate(adaptedCreds);
+							
+							if (authenticated) {
+								if (IResolvingCredentials.class.isAssignableFrom(credentials.getClass())) {
+									final IResolvingCredentials resolvingCreds = (IResolvingCredentials) adaptedCreds;
+									samlCredentials.setResolvedPrincipalId(resolvingCreds.getResolvedPrincipalId());
+								}
+								if (IInformingCredentials.class.isAssignableFrom(credentials.getClass())) {
+									final IInformingCredentials informingCreds = (IInformingCredentials) adaptedCreds;
+									samlCredentials.setAuthenticationStatus(informingCreds.getAuthenticationStatus());
+								}
+								break;
+							}
+							
+						} catch (AuthenticationException e) {
+							// If error during authentication then keep it
+							errorList.add(e);
+						} finally {
+							// If not authenticated add error message
+							if (!authenticated) {
+								sbErrorMsg.append(this.getHandlerName(handler));
+								sbErrorMsg.append(" didn't authenticate credentials");
+								if (IInformingCredentials.class.isAssignableFrom(credentials.getClass())) {
+									final IInformingCredentials informingCreds = (IInformingCredentials) adaptedCreds;
+									sbErrorMsg.append(" and returned code [");
+									sbErrorMsg.append(informingCreds.getAuthenticationStatus());
+									sbErrorMsg.append("]");
+								}
+								sbErrorMsg.append("\r\n");
+							}
+						}
+					} else {
+						LOGGER.warn(String.format("Backing AuthenticationHandler of type: [%1$s] doesn't supports " +
+								"SAML adapted Credentials of type: [%2$s] !", 
+								handler.getClass().getName(), adaptedCreds.getClass().getName()));
+					}
+				}
+				
+				if (!authenticated && !errorList.isEmpty()) {
+					// Not authentified and Some errors were encountered during authentication process
+					LOGGER.warn(
+							String.format("Error while performing SAML authentication ! Attributes [%s] produced the following output : \r\n%s",
+									samlCredentials.getAttributeValues(), sbErrorMsg.toString()));
+					throw errorList;
 				}
 			}
 		}
 
-		return auth;
+		return authenticated;
 	}
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		Assert.notNull(this.backingHandler, "No backing AuthenticationHandler supplied !");
+		Assert.notEmpty(this.backingHandlers, "No backing AuthenticationHandler supplied !");
 		Assert.notNull(this.samlCredsAdaptator, "No ISamlCredentialsAdaptator supplied !");
 	}
-
-	/**
-	 * Getter of backingHandler.
-	 *
-	 * @return the backingHandler
-	 */
-	public AuthenticationHandler getBackingHandler() {
-		return backingHandler;
+	
+	protected String getHandlerName(final AuthenticationHandler handler) {
+		final String name;
+		
+		if (handler instanceof NamedAuthenticationHandler) {
+			name = ((NamedAuthenticationHandler)handler).getName();
+		} else {
+			name = handler.getClass().getName();
+		}
+		
+		return name;
 	}
 
 	/**
-	 * Setter of backingHandler.
+	 * Getter of backingHandlers.
 	 *
-	 * @param backingHandler the backingHandler to set
+	 * @return the backingHandlers
 	 */
-	public void setBackingHandler(AuthenticationHandler backingHandler) {
-		this.backingHandler = backingHandler;
+	public List<AuthenticationHandler> getBackingHandlers() {
+		return backingHandlers;
+	}
+
+	/**
+	 * Setter of backingHandlers.
+	 *
+	 * @param backingHandlers the backingHandlers to set
+	 */
+	public void setBackingHandlers(List<AuthenticationHandler> backingHandlers) {
+		this.backingHandlers = backingHandlers;
 	}
 
 	/**
