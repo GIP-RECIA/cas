@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package org.esco.sso.security.saml.query.impl;
 
@@ -33,7 +33,7 @@ import org.springframework.util.Assert;
 
 /**
  * SAML Authn Request.
- * 
+ *
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
@@ -47,9 +47,13 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 
 	/** IdPConnector Id wich we can serialize. */
 	private String idpConnectorId;
-	
+
 	/** IdpConnector which build this request. */
 	private transient ISaml20IdpConnector idpConnectorBuilder;
+
+	public QueryAuthnRequest() {
+		super();
+	}
 
 	public QueryAuthnRequest(final String id, final ISaml20IdpConnector idpConnectorBuilder,
 			final Map<String, String[]> parametersMap) {
@@ -84,7 +88,7 @@ public class QueryAuthnRequest extends SamlQuery implements IRequestWaitingForRe
 		output.writeObject(this.parametersMap);
 		output.writeObject(this.idpConnectorId);
 	}
-	
+
 	protected void loadIdpConnector(final String idpConnectorId) {
 		final IIdpConfig idpConfig = SamlHelper.getWayfConfig().findIdpConfigById(idpConnectorId);
 		if (idpConfig != null) {

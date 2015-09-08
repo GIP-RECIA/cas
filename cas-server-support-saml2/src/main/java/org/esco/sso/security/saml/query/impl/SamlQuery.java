@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package org.esco.sso.security.saml.query.impl;
 
@@ -22,7 +22,7 @@ import org.esco.sso.security.saml.query.IQuery;
 
 /**
  * Base ISamlQuery implementation.
- * 
+ *
  * @author GIP RECIA 2013 - Maxime BOSSARD.
  *
  */
@@ -36,6 +36,10 @@ public abstract class SamlQuery implements IQuery {
 	@Override
 	public String getId() {
 		return this.id;
+	}
+
+	public SamlQuery() {
+		super();
 	}
 
 	public SamlQuery(final String id) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package org.esco.sso.security.saml.opensaml;
 
@@ -117,8 +117,8 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	private IQueryProcessorFactory queryProcessorFactory;
 
 	@Override
-	public IIncomingSaml processSaml20IncomingRequest(final HttpServletRequest request)
-			throws SamlProcessingException, UnsupportedSamlOperation {
+	public IIncomingSaml processSaml20IncomingRequest(final HttpServletRequest request) throws SamlProcessingException,
+			UnsupportedSamlOperation {
 		IIncomingSaml incomingSaml = null;
 
 		// Build the adapted query processor
@@ -194,14 +194,15 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		// Retrieve IdP connectors and
 		// Register this SP processor in the IdP connectors
 		Assert.notEmpty(this.idpConnectors, "No IdP connector injected in the SP processor !");
-		for (ISaml20IdpConnector idpConnector: this.idpConnectors) {
+		for (ISaml20IdpConnector idpConnector : this.idpConnectors) {
 			try {
 				idpConnector.registerSaml20SpProcessor(this);
 				final IIdpConfig idpConfig = idpConnector.getIdpConfig();
 				if (idpConfig != null) {
 					this.idpConnectorsByEntityId.put(idpConfig.getIdpEntityId(), idpConnector);
 				} else {
-					this.logger.warn("No IdP config found while registering an IdPConnector in SPProcessor with id: [{}] !",
+					this.logger.warn(
+							"No IdP config found while registering an IdPConnector in SPProcessor with id: [{}] !",
 							this.getSpConfig().getId());
 				}
 			} catch (IllegalAccessError e) {
@@ -209,10 +210,10 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			}
 		}
 
-		this.spSigningCredential = SecurityHelper.getSimpleCredential(
-				this.getSpConfig().getSigningCredential().getEntityCertificate(),
-				this.getSpConfig().getSigningKey());
-		Assert.notNull(this.spSigningCredential, "Unable to build SP signing credentials (signing public + private keys) !");
+		this.spSigningCredential = SecurityHelper.getSimpleCredential(this.getSpConfig().getSigningCredential()
+				.getEntityCertificate(), this.getSpConfig().getSigningKey());
+		Assert.notNull(this.spSigningCredential,
+				"Unable to build SP signing credentials (signing public + private keys) !");
 
 		this.decrypter = this.buildDecrypter();
 
@@ -225,12 +226,13 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	/**
 	 * Check if the Response correspond to a request already present in request cache !
 	 * Remove the Request Data from request cache.
-	 * 
+	 *
 	 * @param response
 	 * @return the original request cannot be null
 	 * @throws SamlSecurityException
 	 */
-	protected IRequestWaitingForResponse checkInResponseToRequest(final String inResponseToId) throws SamlSecurityException {
+	protected IRequestWaitingForResponse checkInResponseToRequest(final String inResponseToId)
+			throws SamlSecurityException {
 		IRequestWaitingForResponse request = null;
 
 		if (StringUtils.hasText(inResponseToId)) {
@@ -244,9 +246,8 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 			}
 		}
 
-		if (request == null ){
-			throw new SamlSecurityException(
-					"Response reference a Request which is not (anymore ?) in cache !");
+		if (request == null) {
+			throw new SamlSecurityException("Response reference a Request which is not (anymore ?) in cache !");
 		}
 
 		return request;
@@ -260,12 +261,11 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Store a SAML Authentication in the cache by the IdP session index.
-	 * 
+	 *
 	 * @param authns the collection of authentications
 	 * @throws SamlSecurityException
 	 */
-	protected void storeSamlAuthenticationsInCache(final List<IAuthentication> authns)
-			throws SamlSecurityException {
+	protected void storeSamlAuthenticationsInCache(final List<IAuthentication> authns) throws SamlSecurityException {
 		if (!CollectionUtils.isEmpty(authns)) {
 			for (IAuthentication auth : authns) {
 				String authKey = auth.getSessionIndex();
@@ -283,7 +283,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Find a chached Saml Authentication.
-	 * 
+	 *
 	 * @param sessionId
 	 * @return
 	 */
@@ -302,7 +302,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Find the SAML 2.0 IdP Connector to use to process the SAML Object.
-	 * 
+	 *
 	 * @param samlObject the SAML 2.0 object to process
 	 * @return the SAML 2.0 IdP connector attached
 	 * @throws SamlProcessingException if no IdP connector found
@@ -323,7 +323,8 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 				if (element != null) {
 					Object value = element.getValue();
 					if (value != null) {
-						IRequestWaitingForResponse originalRequestData = (IRequestWaitingForResponse) element.getValue();
+						IRequestWaitingForResponse originalRequestData = (IRequestWaitingForResponse) element
+								.getValue();
 						samlConnector = originalRequestData.getIdpConnectorBuilder();
 					}
 				}
@@ -343,8 +344,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 		}
 
 		if (samlConnector == null) {
-			throw new SamlProcessingException(
-					"Unable to find an IdP Connector to process the SAML request !");
+			throw new SamlProcessingException("Unable to find an IdP Connector to process the SAML request !");
 		}
 
 		return samlConnector;
@@ -352,7 +352,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Logout from CAS.
-	 * 
+	 *
 	 * @param nameID
 	 */
 	protected void logoutFromCas(final String sessionIndex) {
@@ -367,7 +367,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Initialize caches if needed.
-	 * 
+	 *
 	 * @throws IOException
 	 * @throws CacheException
 	 */
@@ -398,7 +398,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Build a decrypter if a private key was provided.
-	 * 
+	 *
 	 * @return the decrypter
 	 */
 	protected Decrypter buildDecrypter() {
@@ -414,7 +414,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/**
 	 * Build a SAML2 signature with signing credentials.
-	 * 
+	 *
 	 * @return the SAML2 signature.
 	 */
 	protected Signature buildSignature(final boolean withoutKeyInfo) {

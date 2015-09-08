@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package org.esco.sso.security.saml.query.impl;
 
@@ -22,7 +22,7 @@ import org.esco.sso.security.saml.om.IResponse;
 
 /**
  * SAML SLO Response to a SAML SLO Request.
- * 
+ *
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
@@ -34,6 +34,10 @@ public class QuerySloResponse extends SamlQuery implements IResponse {
 	private String inResponseToId;
 
 	private QuerySloRequest originalRequest;
+
+	public QuerySloResponse() {
+		super();
+	}
 
 	public QuerySloResponse(final String id) {
 		super(id);

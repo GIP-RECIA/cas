@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package org.esco.sso.security.saml.query.impl;
 
+import java.io.Serializable;
 import java.util.List;
 
 import org.esco.sso.security.saml.om.IAuthentication;
@@ -25,11 +26,11 @@ import org.esco.sso.security.saml.om.IResponse;
 
 /**
  * SAML Authn Response to a SAML Authn Request.
- * 
+ *
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
-public class QueryAuthnResponse extends SamlQuery implements IResponse {
+public class QueryAuthnResponse extends SamlQuery implements IResponse, Serializable {
 
 	/** Svuid. */
 	private static final long serialVersionUID = 381464903804175698L;
@@ -40,6 +41,10 @@ public class QueryAuthnResponse extends SamlQuery implements IResponse {
 	private String inResponseToId;
 
 	private QueryAuthnRequest originalRequest;
+
+	public QueryAuthnResponse() {
+		super();
+	}
 
 	public QueryAuthnResponse(final String id) {
 		super(id);

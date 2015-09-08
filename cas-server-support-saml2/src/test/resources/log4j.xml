@@ -40,14 +40,18 @@
     <logger name="org.springframework">
         <level value="WARN" />
     </logger>
-    
+
     <logger name="org.esco">
         <level value="DEBUG" />
     </logger>
-    
+
     <logger name="org.opensaml">
         <level value="DEBUG" />
-    </logger>    
+    </logger>
+
+     <logger name="net.sf.ehcache">
+        <level value="DEBUG" />
+    </logger>
 
     <logger name="org.springframework.webflow">
         <level value="WARN" />

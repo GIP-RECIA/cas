@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package org.esco.sso.security.saml.query.impl;
 
@@ -30,7 +30,7 @@ import org.esco.sso.security.saml.util.SamlHelper;
 
 /**
  * SAML SLO Request.
- * 
+ *
  * @author GIP RECIA 2012 - Maxime BOSSARD.
  *
  */
@@ -41,8 +41,12 @@ public class QuerySloRequest extends SamlQuery implements IRequestWaitingForResp
 
 	/** IdPConnector Id wich we can serialize. */
 	private String idpConnectorId;
-	
+
 	private transient ISaml20IdpConnector idpConnectorBuilder;
+
+	public QuerySloRequest() {
+		super();
+	}
 
 	public QuerySloRequest(final String id, final ISaml20IdpConnector idpConnectorBuilder) {
 		super(id);
@@ -54,7 +58,6 @@ public class QuerySloRequest extends SamlQuery implements IRequestWaitingForResp
 		return this.idpConnectorBuilder;
 	}
 
-
 	@Override
 	public void readExternal(ObjectInput input) throws IOException, ClassNotFoundException {
 		this.idpConnectorId = (String) input.readObject();
@@ -65,13 +68,12 @@ public class QuerySloRequest extends SamlQuery implements IRequestWaitingForResp
 	public void writeExternal(ObjectOutput output) throws IOException {
 		output.writeObject(this.idpConnectorId);
 	}
-	
+
 	protected void loadIdpConnector(final String idpConnectorId) {
 		final IIdpConfig idpConfig = SamlHelper.getWayfConfig().findIdpConfigById(idpConnectorId);
 		if (idpConfig != null) {
 			this.idpConnectorBuilder = idpConfig.getSaml20IdpConnector();
 		}
 	}
-
 
 }
