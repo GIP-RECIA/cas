@@ -78,6 +78,8 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 
 	private String pictureUrl;
 
+	private boolean isUseFriendlyName;
+
 	private Resource decryptionKeyResource;
 
 	private Class<EncodedKeySpec> decryptionKeySpec;
@@ -308,6 +310,15 @@ public class CasSpConfig implements ISpConfig, InitializingBean {
 
 	public void setPictureUrl(final String pictureUrl) {
 		this.pictureUrl = pictureUrl;
+	}
+
+	@Override
+	public boolean isUseFriendlyName() {
+		return isUseFriendlyName;
+	}
+
+	public void setUseFriendlyName(final boolean useFriendlyName) {
+		isUseFriendlyName = useFriendlyName;
 	}
 
 	public Resource getDecryptionKeyResource() {

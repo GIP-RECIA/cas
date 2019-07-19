@@ -62,7 +62,7 @@ import org.springframework.util.StringUtils;
  * The XML element name of the SAML message is used to determine which query processor to build.
  * The factory is based on Spring Bean Factory
  * 
- * @see BeanFactoryAware.
+ * @see BeanFactoryAware
  * 
  * @author GIP RECIA 2013 - Maxime BOSSARD.
  *
@@ -189,9 +189,7 @@ public class OpenSaml2QueryProcessorFactory implements IQueryProcessorFactory, I
 	/**
 	 * Extract SAML Object from request.
 	 * @param binding
-	 * 
-	 * @param messageContext
-	 *            the message context
+	 *
 	 * @return the SAML Authn Response. It can't be null !
 	 * @throws SamlProcessingException
 	 * @throws SamlSecurityException

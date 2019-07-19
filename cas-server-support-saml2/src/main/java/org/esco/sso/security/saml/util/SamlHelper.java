@@ -74,6 +74,9 @@ public abstract class SamlHelper {
 	/** SAML Relay State HTTP Param name. */
 	public static final String RELAY_STATE_PARAM_KEY = "RelayState";
 
+	/** SAML SP client id HTTP Param name. */
+	public static final String CLIENT_PARAM_KEY = "client_name";
+
 	/** HTTP Request servlet path part for the Single Logout Service endpoint. */
 	public static final String SAML2_SERVPATH_ROUTER = "/Shibboleth.sso/";
 
@@ -136,7 +139,7 @@ public abstract class SamlHelper {
 	 * @return the SP processor
 	 * @throws SamlProcessingException if no SP Processor found to use
 	 */
-	public static ISaml20SpProcessor findSpProcessorToUse(final String endpointUrl) throws SamlProcessingException {
+	public static ISaml20SpProcessor findSpProcessorToUse(final String endpointUrl, final String client) throws SamlProcessingException {
 		for (ISaml20SpProcessor spProcessor : SamlHelper.spProcessors) {
 			for(SamlBindingEnum binding : SamlBindingEnum.values()) {
 				String spEnpointUrl = spProcessor.getSpConfig().getEndpointUrl(binding);

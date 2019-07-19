@@ -124,5 +124,11 @@ public interface IIdpConfig extends Serializable {
 	 * @return the friendlyName
 	 */
 	String getFriendlyName();
+
+	/**
+	 * Permit to use the friendlyName instead of the name of attributes released from an IDP.
+	 * @return boolean
+	 */
+	boolean isUseFriendlyName();
 	
 }

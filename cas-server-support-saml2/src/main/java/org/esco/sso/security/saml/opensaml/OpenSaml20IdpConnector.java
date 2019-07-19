@@ -265,7 +265,7 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 
 		// Xml outgoing message
 		final String xmlOutgoingMsg;
-		if (SignableSAMLObject.class.isAssignableFrom(samlObject.getClass())) {
+		if (SignableSAMLObject.class.isAssignableFrom(samlObject.getClass()) && this.getSaml20SpProcessor().isSignAuthnRequest()) {
 			final SignableSAMLObject signableSamlObject = (SignableSAMLObject) samlObject;
 			xmlOutgoingMsg = OpenSamlHelper.marshallSignableSamlObject(signableSamlObject);
 		} else {
@@ -391,7 +391,9 @@ public class OpenSaml20IdpConnector implements ISaml20IdpConnector, Initializing
 		conditions.setNotOnOrAfter(this.buildNotOnOrAfterTime(issueInstant));
 		authnRequest.setConditions(conditions);
 
-		this.getSaml20SpProcessor().signSamlObject(authnRequest);
+		if (this.getSaml20SpProcessor().isSignAuthnRequest()){
+			this.getSaml20SpProcessor().signSamlObject(authnRequest);
+		}
 
 		return authnRequest;
 	}

@@ -190,4 +190,8 @@ public class CasIdpConfig implements IIdpConfig {
 		throw new IllegalAccessError("This method must not be called !");
 	}
 
+	@Override
+	public boolean isUseFriendlyName() {
+		return false;
+	}
 }

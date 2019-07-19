@@ -117,4 +117,7 @@ public interface ISaml20SpProcessor {
 	 * @return true if the session was logout
 	 */
 	boolean logout(String sessionIndex);
+
+
+	boolean isSignAuthnRequest();
 }

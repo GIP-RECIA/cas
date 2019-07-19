@@ -123,6 +123,8 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	/** Name of the vector attribute in SAML Ticket. */
 	private String friendlyName;
 
+	private boolean useFriendlyName;
+
 	/**
 	 * Retrieve current HTTP Request.
 	 * 
@@ -431,5 +433,17 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	public void setFriendlyName(String friendlyName) {
 		this.friendlyName = friendlyName;
 	}
-	
+
+	/**
+	 * Permit to tell to use the friendlyName instead of the name
+	 * @return
+	 */
+	@Override
+	public boolean isUseFriendlyName() {
+		return useFriendlyName;
+	}
+
+	public void setUseFriendlyName(final boolean useFriendlyName) {
+		this.useFriendlyName = useFriendlyName;
+	}
 }

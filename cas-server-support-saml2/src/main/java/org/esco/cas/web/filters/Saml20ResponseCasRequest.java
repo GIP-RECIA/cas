@@ -93,6 +93,7 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 			final String idpIdParamKey = SamlHelper.getWayfConfig().getIdpIdParamKey();
 			this.parameters.remove(idpIdParamKey);
 			this.parameters.remove(SamlHelper.SAML_RESPONSE_PARAM_KEY);
+			this.parameters.remove(SamlHelper.CLIENT_PARAM_KEY);
 			// Lock the map.
 			this.parameters = MapUtils.unmodifiableMap(this.parameters);
 
@@ -105,8 +106,8 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 			throws SamlProcessingException, UnsupportedSamlOperation {
 		IIncomingSaml incomingSaml = null;
 
-		final String endpointUrl = this.getRequestURL().toString();
-		final ISaml20SpProcessor spProcessor = SamlHelper.findSpProcessorToUse(endpointUrl);
+		final String endpointUrl = this.getRequestURL().toString() + (this.getQueryString() != null ? "?" + this.getQueryString() : "");
+		final ISaml20SpProcessor spProcessor = SamlHelper.findSpProcessorToUse(endpointUrl, this.getParameter(SamlHelper.CLIENT_PARAM_KEY));
 
 		incomingSaml = spProcessor.processSaml20IncomingRequest(this);
 

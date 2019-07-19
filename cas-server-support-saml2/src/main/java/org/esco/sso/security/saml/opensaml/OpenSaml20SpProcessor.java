@@ -58,6 +58,7 @@ import org.opensaml.xml.security.SecurityHelper;
 import org.opensaml.xml.security.credential.BasicCredential;
 import org.opensaml.xml.security.credential.Credential;
 import org.opensaml.xml.security.keyinfo.StaticKeyInfoCredentialResolver;
+import org.opensaml.xml.security.x509.BasicX509Credential;
 import org.opensaml.xml.signature.Signature;
 import org.opensaml.xml.signature.impl.SignatureBuilder;
 import org.slf4j.Logger;
@@ -94,6 +95,8 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	/** SP Signing credentials (spSigningKey + spSigningCertificate). */
 	private Credential spSigningCredential;
+
+	private boolean signAuthnRequest = true;
 
 	/** Cache for Request which wait for a response to be received. */
 	private Ehcache samlRequestWaitingForResponseCache;
@@ -404,7 +407,7 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 	protected Decrypter buildDecrypter() {
 		Decrypter decrypter = null;
 
-		BasicCredential credential = new BasicCredential();
+		BasicCredential credential = new BasicX509Credential();
 		credential.setPrivateKey(this.getSpConfig().getDecryptionKey());
 		decrypter = new Decrypter(null, new StaticKeyInfoCredentialResolver(credential),
 				new InlineEncryptedKeyResolver());
@@ -484,6 +487,14 @@ public class OpenSaml20SpProcessor implements ISaml20SpProcessor, InitializingBe
 
 	public void setQueryProcessorFactory(final IQueryProcessorFactory queryProcessorFactory) {
 		this.queryProcessorFactory = queryProcessorFactory;
+	}
+
+	public boolean isSignAuthnRequest() {
+		return signAuthnRequest;
+	}
+
+	public void setSignAuthnRequest(final boolean signAuthnRequest) {
+		this.signAuthnRequest = signAuthnRequest;
 	}
 
 }

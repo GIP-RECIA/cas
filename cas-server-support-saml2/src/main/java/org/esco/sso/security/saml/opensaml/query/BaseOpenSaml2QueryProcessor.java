@@ -184,7 +184,7 @@ extends BaseSamlQueryProcessor<T> {
 		ISaml20IdpConnector connector = this.getSpProcessor().findSaml20IdpConnectorToUse(issuer.getValue());
 
 		if (connector == null) {
-			throw new SamlSecurityException("IdP Connector not found !");
+			throw new SamlSecurityException(String.format("IdP Connector not found from issuer %s!", issuer.getValue()));
 		}
 
 		return connector;

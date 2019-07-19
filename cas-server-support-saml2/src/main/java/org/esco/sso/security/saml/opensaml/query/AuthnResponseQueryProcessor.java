@@ -436,8 +436,8 @@ public class AuthnResponseQueryProcessor extends BaseOpenSaml2QueryProcessor<Que
 							}
 						}
 					}
-					//FIXME why name and nom friendly name 
-					final String attrName = attr.getName();
+					final boolean useFriendlyName = this.getSpProcessor().getSpConfig().isUseFriendlyName();
+					final String attrName = useFriendlyName ? attr.getFriendlyName() : attr.getName();
 					if (!CollectionUtils.isEmpty(values)) {
 						authn.addAttribute(attrName, values);
 					}

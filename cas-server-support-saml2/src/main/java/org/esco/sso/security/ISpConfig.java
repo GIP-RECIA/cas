@@ -44,6 +44,8 @@ public interface ISpConfig extends Serializable {
 	/** Service Provider representative picture. */
 	String getPictureUrl();
 
+	boolean isUseFriendlyName();
+
 	/**
 	 * Service Provider endpoint URL for this binding.
 	 * 
