@@ -3,6 +3,7 @@ package org.esco.cas.authentication.handler;
 import org.esco.cas.authentication.handler.support.MultiValuedSaml20CredentialsHandler;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
 import org.esco.cas.authentication.principal.Saml20Credentials;
+import org.esco.cas.authentication.principal.Saml20MultiAccountCredentials;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,7 +29,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandlerTest {
 
     private static LdapFiltersMultiAccountsAuthenticationHandler multiAccountFilter;
 
-    private static MultiValuedAttributeCredentials credential;
+    private static Saml20MultiAccountCredentials credential;
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -44,7 +45,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandlerTest {
 
         multiAccountFilter.afterPropertiesSet();
 
-        credential = new MultiValuedAttributeCredentials();
+        credential = new Saml20MultiAccountCredentials();
         ArrayList<String> credsVals = new ArrayList<String>();
         credsVals.add("{ECT-ENT}731cc7cddb3ef14bd245226a549335840a2b78ff62d6cb9b4e87ccf311888237d3ce0592906ead11451530bb9ea96339");
         credsVals.add("{ECT}f788997b067eb34d08595de6015b2ba7b8d74fb6753b640ffb33c94efcb89fe10b5016509344d6cc9b3ad4cc35449b6f");

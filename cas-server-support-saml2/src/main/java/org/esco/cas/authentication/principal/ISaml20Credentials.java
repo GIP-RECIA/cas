@@ -63,4 +63,10 @@ public interface ISaml20Credentials extends IInformingCredentials, IResolvingCre
 	 */
 	List<String> getAttributeValues();
 
+	/**
+	 * Flag that permit to check the way to manage multi credentials provided.
+	 * @return
+	 */
+	boolean isMultiAccountManagement();
+
 }

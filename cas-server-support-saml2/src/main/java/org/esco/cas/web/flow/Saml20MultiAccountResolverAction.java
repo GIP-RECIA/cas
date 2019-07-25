@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.ISaml20Facade;
-import org.esco.cas.authentication.handler.support.ISaml20CredentialsAdaptors;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.cas.impl.SamlAuthInfo;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
@@ -44,8 +43,6 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 	/** Saml2 Facade. */
 	private ISaml20Facade saml2Facade;
-
-	private ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> samlCredsAdaptator;
 
 	@Override
 	protected Credentials constructCredentialsFromRequest(final RequestContext context) {		
@@ -87,12 +84,8 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 				authInfos.setIdpEntityId(idpEntityId);
 				authInfos.setIdpSubject(authentication.getSubjectId());
 				authInfos.setSessionIndex(authentication.getSessionIndex());
-
-				if (samlCredsAdaptator != null && samlCredsAdaptator.support(saml20Credentials) && samlCredsAdaptator.validate(saml20Credentials)) {
-					credentials = samlCredsAdaptator.adapt(saml20Credentials);
-				} else {
-					credentials = saml20Credentials;
-				}
+				
+				credentials = saml20Credentials;
 
 				// Put identity vector credentials in flow scope
 				context.getFlowScope().put(Saml20AuthenticationAction.SAML_CREDENTIALS_FLOW_SCOPE_KEY, credentials);
@@ -143,15 +136,6 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 		this.saml2Facade.storeAuthCredentialsInCache(tgtId , samlCredentials);
 	}
-
-	public ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> getSamlCredsAdaptator() {
-		return samlCredsAdaptator;
-	}
-
-	public void setSamlCredsAdaptator(ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> samlCredsAdaptator) {
-		this.samlCredsAdaptator = samlCredsAdaptator;
-	}
-
 
 	/**
 	 * {@inheritDoc}

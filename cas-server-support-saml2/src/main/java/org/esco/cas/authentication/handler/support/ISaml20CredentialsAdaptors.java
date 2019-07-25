@@ -17,7 +17,7 @@ import org.jasig.cas.authentication.principal.Credentials;
  * @author GIP RECIA 2013 - Maxime BOSSARD.
  *
  */
-public interface ISaml20CredentialsHandler<T extends ISaml20Credentials, V extends Credentials> {
+public interface ISaml20CredentialsAdaptors<T extends ISaml20Credentials, V extends Credentials> {
 
 	boolean support(T credential);
 

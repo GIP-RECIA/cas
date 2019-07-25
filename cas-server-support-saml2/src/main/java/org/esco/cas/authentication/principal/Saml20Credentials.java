@@ -74,4 +74,8 @@ public class Saml20Credentials extends MultiValuedAttributeCredentials implement
 		this.attributeFriendlyName = attributeFriendlyName;
 	}
 
+	@Override
+	public boolean isMultiAccountManagement() {
+		return false;
+	}
 }

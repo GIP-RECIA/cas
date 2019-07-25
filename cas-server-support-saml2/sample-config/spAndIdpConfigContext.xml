@@ -120,6 +120,7 @@
 	<bean id="externalIdpConnector"
 		class="org.esco.sso.security.saml.opensaml.OpenSaml20IdpConnector">
 		<property name="idpConfig" ref="externalIdpConfig" />
+		<property name="credentialType" value="org.esco.cas.authentication.principal.Saml20MultiAccountCredentials" />
 	
 		<!-- Optionnal if need to adapt the SAML 2.0 connexions. Not needed with shibboleth. -->
 		<!--	

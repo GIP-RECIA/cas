@@ -28,8 +28,10 @@ import org.esco.cas.authentication.exception.AbstractCredentialsException;
 import org.esco.cas.authentication.exception.EmptyCredentialsException;
 import org.esco.cas.authentication.exception.NoAccountCredentialsException;
 import org.esco.cas.authentication.principal.IInformingCredentials;
+import org.esco.cas.authentication.principal.IMultiAccountCredential;
 import org.esco.cas.authentication.principal.IResolvingCredentials;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
+import org.esco.cas.authentication.principal.Saml20MultiAccountCredentials;
 import org.jasig.cas.authentication.handler.AuthenticationException;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.util.LdapUtils;
@@ -54,7 +56,7 @@ public class LdapFiltersAuthenticationHandler extends AbstractLdapAuthentificati
 
 	@Override
 	public boolean supports(final Credentials credentials) {
-		return (credentials != null) && (MultiValuedAttributeCredentials.class.isAssignableFrom(credentials.getClass()));
+		return (credentials != null) && (MultiValuedAttributeCredentials.class.isAssignableFrom(credentials.getClass()) && !(IMultiAccountCredential.class.isAssignableFrom(credentials.getClass())));
 	}
 
 	@Override

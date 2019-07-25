@@ -10,6 +10,7 @@ import org.esco.cas.authentication.exception.EmptyCredentialsException;
 import org.esco.cas.authentication.exception.MultiValuedCredentialsException;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
+import org.esco.cas.authentication.principal.Saml20MultiAccountCredentials;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -21,6 +22,11 @@ import org.springframework.util.CollectionUtils;
  *
  */
 public class MonoValuedSaml20CredentialsHandler implements ISaml20CredentialsHandler<ISaml20Credentials, MultiValuedAttributeCredentials> {
+
+	@Override
+	public boolean support(ISaml20Credentials credential) {
+		return !credential.isMultiAccountManagement() && !Saml20MultiAccountCredentials.class.isAssignableFrom(credential.getClass());
+	}
 
 	@Override
 	public boolean validate(ISaml20Credentials credentials) throws AbstractCredentialsException {

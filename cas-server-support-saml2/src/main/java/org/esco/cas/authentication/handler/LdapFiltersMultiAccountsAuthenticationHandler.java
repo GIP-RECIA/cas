@@ -30,8 +30,10 @@ import org.esco.cas.authentication.exception.EmptyCredentialsException;
 import org.esco.cas.authentication.exception.MultiAccountsCredentialsException;
 import org.esco.cas.authentication.exception.NoAccountCredentialsException;
 import org.esco.cas.authentication.principal.IInformingCredentials;
+import org.esco.cas.authentication.principal.IMultiAccountCredential;
 import org.esco.cas.authentication.principal.IResolvingCredentials;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
+import org.esco.cas.authentication.principal.Saml20MultiAccountCredentials;
 import org.jasig.cas.authentication.handler.AuthenticationException;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.util.LdapUtils;
@@ -69,7 +71,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 
 	@Override
 	public boolean supports(final Credentials credentials) {
-		return (credentials != null) && (MultiValuedAttributeCredentials.class.isAssignableFrom(credentials.getClass()));
+		return (credentials != null) && (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass()));
 	}
 
 	@Override
@@ -77,7 +79,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 		boolean auth = false;
 
 		if (credentials != null) {
-			MultiValuedAttributeCredentials mvCredentials = (MultiValuedAttributeCredentials) credentials;
+			Saml20MultiAccountCredentials mvCredentials = (Saml20MultiAccountCredentials) credentials;
 
 			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug(String.format(
@@ -129,7 +131,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 	 * @return true if authenticated
 	 * @throws AuthenticationException
 	 */
-	protected MultiValuedAttributeCredentials authenticateAttributeValuesInternal(final MultiValuedAttributeCredentials credentials) throws AuthenticationException {
+	protected Saml20MultiAccountCredentials authenticateAttributeValuesInternal(final Saml20MultiAccountCredentials credentials) throws AuthenticationException {
 		boolean authenticated = false;
 
 		final List<String> attrValues = credentials.getAttributeValues();
@@ -179,11 +181,11 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 								"Resolving credentials: [%s]", resolvingCreds.toString()));
 					}
 				}
+				credentials.setResolvedPrincipalIds(principalIds);
 			}
 			if (principalIds.size() > 1) {
 				// gestion du cas multi-account
 				this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.MULTIPLE_ACCOUNTS);
-				credentials.setResolvedPrincipalIds(principalIds);
 			}
 
 		} else {
@@ -201,7 +203,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 		return credentials;
 	}
 
-	protected List<String> extractCredentialsOfNotMergedAccount(final MultiValuedAttributeCredentials credentials){
+	protected List<String> extractCredentialsOfNotMergedAccount(final Saml20MultiAccountCredentials credentials){
 		List<String> ids = new ArrayList<String>();
 		for (String cred: credentials.getAttributeValues()) {
 			final Matcher matcher = this.patternOfAccountsCredential.matcher(cred);
@@ -215,7 +217,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 		return ids;
 	}
 
-	protected String extractCredentialOfMergedAccount(final MultiValuedAttributeCredentials credentials){
+	protected String extractCredentialOfMergedAccount(final Saml20MultiAccountCredentials credentials){
 		for (String cred: credentials.getAttributeValues()) {
 			final Matcher matcher = this.patternOfMergedCredential.matcher(cred);
 			if (matcher.matches()){
