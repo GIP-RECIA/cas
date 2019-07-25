@@ -24,6 +24,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.authentication.exception.AuthenticationExceptionList;
 import org.esco.cas.authentication.handler.support.ISaml20CredentialsHandler;
+import org.esco.cas.authentication.handler.support.MonoValuedSaml20CredentialsHandler;
+import org.esco.cas.authentication.handler.support.MultiValuedSaml20CredentialsHandler;
 import org.esco.cas.authentication.principal.IInformingCredentials;
 import org.esco.cas.authentication.principal.IResolvingCredentials;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
@@ -54,7 +56,9 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 	
 	@Override
 	public boolean supports(final Credentials credentials) {
-		return (credentials != null) && (ISaml20Credentials.class.isAssignableFrom(credentials.getClass()));
+		return (credentials != null) && (ISaml20Credentials.class.isAssignableFrom(credentials.getClass())) &&
+				((MonoValuedSaml20CredentialsHandler.class.isAssignableFrom(samlCredsAdaptator.getClass()) && !(((ISaml20Credentials)credentials).getAttributeValues().size()>1)) ||
+						(MultiValuedSaml20CredentialsHandler.class.isAssignableFrom(samlCredsAdaptator.getClass()) && ((ISaml20Credentials)credentials).getAttributeValues().size()>1));
 	}
 
 	@Override
