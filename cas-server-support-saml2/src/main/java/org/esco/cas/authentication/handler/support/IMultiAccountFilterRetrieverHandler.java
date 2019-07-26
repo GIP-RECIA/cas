@@ -5,6 +5,7 @@ import org.opensaml.xml.util.Pair;
 
 import javax.naming.directory.Attributes;
 import java.util.List;
+import java.util.Map;
 
 public interface IMultiAccountFilterRetrieverHandler {
 
@@ -12,7 +13,7 @@ public interface IMultiAccountFilterRetrieverHandler {
 
     boolean supports(Credentials credentials);
 
-    Pair<List<String>, List<Attributes>> retrieveAccounts(Credentials credentials);
+    Pair<List<String>, List<Map<String, List<String>>>> retrieveAccounts(Credentials credentials);
 
 
 }

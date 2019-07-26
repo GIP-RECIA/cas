@@ -19,7 +19,9 @@
 package org.esco.cas.authentication.handler;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +43,9 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
 
@@ -73,7 +77,7 @@ public class LdapFiltersMultiAccountsAuthenticationHandler implements IMultiAcco
 		return (credentials != null) && (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass()));
 	}
 
-	public Pair<List<String>, List<Attributes>> retrieveAccounts(final Credentials credentials){
+	public Pair<List<String>, List<Map<String, List<String>>>> retrieveAccounts(final Credentials credentials){
 		if (credentials != null) {
 			IMultiAccountCredential mvCredentials = (IMultiAccountCredential) credentials;
 
@@ -104,28 +108,26 @@ public class LdapFiltersMultiAccountsAuthenticationHandler implements IMultiAcco
 				}
 
 				// Recherche du/des comptes si plusieurs retrouvés.
-				final List<Attributes> accounts = this.searchInLdap(mainFilter.toString());
+				final List<Map<String, List<String>>> accounts = this.searchInLdap(mainFilter.toString());
 				final List<String> principals = this.getPrincipalIds(accounts);
-				return new Pair<List<String>, List<Attributes>>(principals, accounts);
+				return new Pair<List<String>, List<Map<String, List<String>>>>(principals, accounts);
 			}
 		}
 		return null;
 	}
 
-	protected final List<String> getPrincipalIds(final List<Attributes> accounts) {
+	protected final List<String> getPrincipalIds(final List<Map<String, List<String>>> accounts) {
 		if (accounts.isEmpty()) {
 			// No account bind to the LDAP query
 			return null;
 		}
 
 		List<String> ids = new ArrayList<String>();
-		try {
-			for (Attributes attribute: accounts) {
-				ids.add((String) attribute.get(this.getPrincipalAttributeName()).get());
-			}
-		} catch (NamingException e) {
-			LOGGER.error("Unable to find principal attribute value in LDAP !");
+
+		for (Map<String, List<String>> account: accounts) {
+			ids.addAll(account.get(this.getPrincipalAttributeName()));
 		}
+
 
 		return ids;
 	}
@@ -136,24 +138,49 @@ public class LdapFiltersMultiAccountsAuthenticationHandler implements IMultiAcco
 	 * @param filter the search filter
 	 * @return the list of attributes
 	 */
-	protected final List<Attributes> searchInLdap(final String filter) {
-		final List<Attributes> result = new ArrayList<Attributes>();
+	protected final List<Map<String, List<String>>> searchInLdap(final String filter) {
+		final List<Map<String, List<String>>> result = new ArrayList<Map<String, List<String>>>();
 
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug(String.format("Starting LDAP search for filter [%s] ...", filter));
 		}
 		this.getLdapTemplate().search(this.getSearchBase(), filter, this.getSearchControls(), new AttributesMapper() {
 			@Override
-			public Object mapFromAttributes(final Attributes attrs) throws NamingException {
-				if (attrs != null) {
-					result.add(attrs);
+			public Object mapFromAttributes(final Attributes attributes) throws NamingException {
+				if (attributes != null) {
+					Map<String, List<String>> account = new HashMap<String, List<String>>();
+					for (final NamingEnumeration<? extends Attribute> attributesEnum = attributes.getAll(); attributesEnum.hasMore(); ) {
+						final Attribute attribute = attributesEnum.next();
+						if (attribute.size() > 0) {
+							final String attrName = attribute.getID();
+							final List<String> values = this.getAttributeValues(attribute);
+							account.put(attrName, values);
+						}
+					}
+					result.add(account);
 				}
 				return null;
 			}
-		});
+			private List<String> getAttributeValues(Attribute attributeValue){
+				List<String> values = new ArrayList<String>();
+				try {
+					for (final NamingEnumeration<?> attributesEnum = attributeValue.getAll(); attributesEnum.hasMore(); ) {
+						final Object obj = attributesEnum.nextElement();
+						if (obj instanceof String) {
+							final String value = (String) obj;
+							values.add(value);
+						}
+					}
+				} catch (NamingException e){
+					LOGGER.error("No enumeration values for " + attributeValue.toString());
+				}
 
+				return values;
+			}
+		});
 		return result;
 	}
+
 
 
 		@Override
