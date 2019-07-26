@@ -1,5 +1,6 @@
-package org.esco.cas.authentication.handler;
+package org.esco.cas.authentication.handler.support;
 
+import org.esco.cas.authentication.handler.support.FilteredMultiAccountSaml20CredentialsHandler;
 import org.esco.cas.authentication.handler.support.MultiValuedSaml20CredentialsHandler;
 import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
 import org.esco.cas.authentication.principal.Saml20Credentials;
@@ -16,32 +17,24 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 @RunWith(value= BlockJUnit4ClassRunner.class)
-public class LdapFiltersMultiAccountsAuthenticationHandlerTest {
-
-    private static final String authenticationAllValuesFilter = "(&(|(ObjectClass=ENTEleve)(ObjectClass=ENTAuxPersRelEleve)) (ENTPersonJointure=AC-ORLEANS-TOURS$%u))";
-    private static final String authenticationMergedAccountFilter = "(&(|(ObjectClass=ENTEleve)(ObjectClass=ENTAuxPersRelEleve)) (EduConnectJointure=%u))";
-
+public class FilteredMultiAccountSaml20CredentialsHandlerTest {
     private static final String mergedCredentialPattern = "\\{ECT-ENT\\}([a-z0-9]{12,})";
     private static final String accountsCredentialPattern = "\\{AAF\\}[0-9A-Z|]+\\|([0-9]+)";
 
     private static final int groupPatternOfMergedCredentialToExtract = 1;
     private static final int groupPatternOfAccountsCredentialToExtract = 1;
 
-    private static LdapFiltersMultiAccountsAuthenticationHandler multiAccountFilter;
+    private static FilteredMultiAccountSaml20CredentialsHandler multiAccountFilter;
 
     private static Saml20MultiAccountCredentials credential;
 
     @BeforeClass
     public static void setUp() throws Exception {
-        multiAccountFilter = new LdapFiltersMultiAccountsAuthenticationHandler();
-        multiAccountFilter.setAuthenticationAllValuesFilter(authenticationAllValuesFilter);
-        multiAccountFilter.setAuthenticationMergedAccountFilter(authenticationMergedAccountFilter);
+        multiAccountFilter = new FilteredMultiAccountSaml20CredentialsHandler();
         multiAccountFilter.setMergedCredentialPattern(mergedCredentialPattern);
         multiAccountFilter.setAccountsCredentialPattern(accountsCredentialPattern);
         multiAccountFilter.setGroupPatternOfAccountsCredentialToExtract(groupPatternOfAccountsCredentialToExtract);
         multiAccountFilter.setGroupPatternOfMergedCredentialToExtract(groupPatternOfMergedCredentialToExtract);
-
-        multiAccountFilter.setPrincipalAttributeName("uid");
 
         multiAccountFilter.afterPropertiesSet();
 

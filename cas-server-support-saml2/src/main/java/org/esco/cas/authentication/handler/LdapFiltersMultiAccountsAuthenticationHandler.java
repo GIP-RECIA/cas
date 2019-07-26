@@ -20,30 +20,30 @@ package org.esco.cas.authentication.handler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.authentication.exception.AbstractCredentialsException;
 import org.esco.cas.authentication.exception.EmptyCredentialsException;
-import org.esco.cas.authentication.exception.MultiAccountsCredentialsException;
 import org.esco.cas.authentication.exception.NoAccountCredentialsException;
-import org.esco.cas.authentication.principal.IInformingCredentials;
+import org.esco.cas.authentication.handler.support.IMultiAccountFilterRetrieverHandler;
 import org.esco.cas.authentication.principal.IMultiAccountCredential;
 import org.esco.cas.authentication.principal.IResolvingCredentials;
-import org.esco.cas.authentication.principal.MultiValuedAttributeCredentials;
 import org.esco.cas.authentication.principal.Saml20MultiAccountCredentials;
 import org.jasig.cas.authentication.handler.AuthenticationException;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.util.LdapUtils;
+import org.opensaml.xml.util.Pair;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.ldap.core.AttributesMapper;
+import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
+import javax.naming.directory.SearchControls;
 
 /**
  * LDAP authentication handler managing multiples LDAP filters and multiple different attribute values.
@@ -51,176 +51,76 @@ import javax.naming.directory.Attributes;
  * @author GIP RECIA 2019 - Julien Gribonvald.
  *
  */
-public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapAuthentificationHandler implements InitializingBean {
+public class LdapFiltersMultiAccountsAuthenticationHandler implements IMultiAccountFilterRetrieverHandler, InitializingBean {
 
 	/** Logger. */
 	private static final Log LOGGER = LogFactory.getLog(LdapFiltersMultiAccountsAuthenticationHandler.class);
+
+	private String name;
 
 	/** Ordered list of all LDAP filters to try for authenticate credentials. */
 	private String authenticationAllValuesFilter;
 	private String authenticationMergedAccountFilter;
 
-	@Override
+	private LdapTemplate ldapTemplate;
+	private String searchBase;
+	private SearchControls searchControls;
+	private String principalAttributeName;
+	private boolean ignorePartialResultException = false;
+
+
 	public boolean supports(final Credentials credentials) {
 		return (credentials != null) && (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass()));
 	}
 
-	@Override
-	protected boolean doAuthentication(final Credentials credentials) throws AuthenticationException {
-		boolean auth = false;
-
+	public Pair<List<String>, List<Attributes>> retrieveAccounts(final Credentials credentials){
 		if (credentials != null) {
-			Saml20MultiAccountCredentials mvCredentials = (Saml20MultiAccountCredentials) credentials;
+			IMultiAccountCredential mvCredentials = (IMultiAccountCredential) credentials;
 
 			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug(String.format(
-						"Try to authenticate SAML 2.0 Response with attributes: [%s]",
-						mvCredentials.getAttributeValues()));
+						"Try to resolve users from SAML 2.0 Response with attributes: [%s] and with opaqueId [%s]",
+						mvCredentials.getFederatedIds(), mvCredentials.getOpaqueId()));
 			}
 
-			// Default is not authenticated
-			this.updateAuthenticationStatus(mvCredentials, AuthenticationStatusEnum.NOT_AUTHENTICATED);
-
-			try {
-				mvCredentials = this.authenticateAttributeValuesInternal(mvCredentials);
-			} catch(AbstractCredentialsException e) {
-				this.updateAuthenticationStatus(mvCredentials, e.getStatusCode());
-				throw e;
-			}
-
-			auth = AuthenticationStatusEnum.AUTHENTICATED.equals(mvCredentials.getAuthenticationStatus()) || AuthenticationStatusEnum.MULTIPLE_ACCOUNTS.equals(mvCredentials.getAuthenticationStatus());
-			if (auth) {
-				LOGGER.info(String.format(
-						"[%s] Successfully authenticated SAML 2.0 Response with attributes: [%s]",
-						this.getName(), mvCredentials.getAttributeValues()));
-
-				if (AuthenticationStatusEnum.MULTIPLE_ACCOUNTS.equals(mvCredentials.getAuthenticationStatus())) {
-					LOGGER.warn(String.format(
-						"[%s] Multi Accounts Detected with attributes: [%s]",
-						this.getName(), mvCredentials.getAttributeValues()));
-
-				}
-			}
-
-		}
-
-		return auth;
-	}
-
-	protected void updateAuthenticationStatus(final Credentials creds, final AuthenticationStatusEnum authStatus) {
-		if (creds != null && IInformingCredentials.class.isAssignableFrom(creds.getClass())) {
-			final IInformingCredentials informingCreds = (IInformingCredentials) creds;
-			informingCreds.setAuthenticationStatus(authStatus);
-		}
-	}
-
-	/**
-	 * Try to authenticate some attribute values.
-	 * Try a list of LDAP filters and stop on the first successful attempt.
-	 *
-	 * @param credentials the MultiValuedAttributeCredentials
-	 * @return true if authenticated
-	 * @throws AuthenticationException
-	 */
-	protected Saml20MultiAccountCredentials authenticateAttributeValuesInternal(final Saml20MultiAccountCredentials credentials) throws AuthenticationException {
-		boolean authenticated = false;
-
-		final List<String> attrValues = credentials.getAttributeValues();
-
-		if (!CollectionUtils.isEmpty(attrValues)) {
-			// construction du filtre avec l'ensemble des attributs du crédential transmis.
-			StringBuilder mainFilter = new StringBuilder("(|");
-			boolean haveCreds = false;
-			for (String cred: credentials.getFederatedIds()) {
-				if (StringUtils.hasText(cred)) {
-					mainFilter.append(LdapUtils.getFilterWithValues(this.authenticationAllValuesFilter, cred));
-					haveCreds = true;
-				}
-			}
-			final String mergedCred = credentials.getOpaqueId();
-			if (StringUtils.hasText(mergedCred)) {
-				mainFilter.append(LdapUtils.getFilterWithValues(this.authenticationMergedAccountFilter, mergedCred));
-				haveCreds = true;
-			}
-			if (!haveCreds) {
-				// No usable credentials was found
-				this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.EMPTY_CREDENTIAL);
-				throw new EmptyCredentialsException();
-			}
-			mainFilter.append(")");
-
-			if (LOGGER.isDebugEnabled()) {
-				LOGGER.debug(String.format(
-						"Try to authenticate SAML 2.0 Response with LDAP filter: [%s]", mainFilter));
-			}
-
-			// Recherche du/des comptes si plusieurs retrouvés.
-			final List<String> principalIds = this.searchAccounts(mainFilter.toString());
-
-			// cas d'un seul compte.
-			final String firstPrincipal = principalIds != null && !principalIds.isEmpty() ? principalIds.get(0) : null;
-			authenticated = principalIds != null && principalIds.size() >= 1 && StringUtils.hasText(firstPrincipal) ;
-			if (authenticated) {
-				credentials.setAuthenticatedValue(firstPrincipal);
-				this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.AUTHENTICATED);
-				if (IResolvingCredentials.class.isAssignableFrom(credentials.getClass())) {
-					IResolvingCredentials resolvingCreds = (IResolvingCredentials) credentials;
-					resolvingCreds.setResolvedPrincipalId(firstPrincipal);
-
-					if (LOGGER.isDebugEnabled()) {
-						LOGGER.debug(String.format(
-								"Resolving credentials: [%s]", resolvingCreds.toString()));
+			if (!CollectionUtils.isEmpty(mvCredentials.getFederatedIds()) || StringUtils.hasText(mvCredentials.getOpaqueId())) {
+				// construction du filtre avec l'ensemble des attributs du crédential transmis.
+				StringBuilder mainFilter = new StringBuilder("(|");
+				for (String cred : mvCredentials.getFederatedIds()) {
+					if (StringUtils.hasText(cred)) {
+						mainFilter.append(LdapUtils.getFilterWithValues(this.authenticationAllValuesFilter, cred));
 					}
 				}
-				credentials.setResolvedPrincipalIds(principalIds);
+				final String mergedCred = mvCredentials.getOpaqueId();
+				if (StringUtils.hasText(mergedCred)) {
+					mainFilter.append(LdapUtils.getFilterWithValues(this.authenticationMergedAccountFilter, mergedCred));
+				}
+
+				mainFilter.append(")");
+
+				if (LOGGER.isDebugEnabled()) {
+					LOGGER.debug(String.format(
+							"Try to authenticate SAML 2.0 Response with LDAP filter: [%s]", mainFilter));
+				}
+
+				// Recherche du/des comptes si plusieurs retrouvés.
+				final List<Attributes> accounts = this.searchInLdap(mainFilter.toString());
+				final List<String> principals = this.getPrincipalIds(accounts);
+				return new Pair<List<String>, List<Attributes>>(principals, accounts);
 			}
-			if (principalIds.size() > 1) {
-				// gestion du cas multi-account
-				this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.MULTIPLE_ACCOUNTS);
-			}
-
-		} else {
-			// Empty credentials
-			this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.EMPTY_CREDENTIAL);
-			throw new EmptyCredentialsException();
 		}
-
-		if (!authenticated) {
-			// we cannoud found an account linked to the email address
-			this.updateAuthenticationStatus(credentials, AuthenticationStatusEnum.NO_ACCOUNT);
-			throw new NoAccountCredentialsException();
-		}
-
-		return credentials;
+		return null;
 	}
 
-	/**
-	 * Search an account bind to the filled ldap filter.
-	 *
-	 * @param filledFilter the filled ldap filter
-	 * @return the not null principal id if one was found corresponding to the filter
-	 * @throws AuthenticationException in case of multiple accounts found
-	 */
-	protected final List<String> searchAccounts(final String filledFilter) throws AuthenticationException {
-
-		List<Attributes> results = null;
-		try {
-			results = this.searchInLdap(filledFilter);
-		} catch (Exception e) {
-			// Catch exceptions to go further in authentication process
-			LOGGER.error("Error during account authentication in LDAP !", e);
-			return null;
-		}
-
-		if (results.isEmpty()) {
+	protected final List<String> getPrincipalIds(final List<Attributes> accounts) {
+		if (accounts.isEmpty()) {
 			// No account bind to the LDAP query
-			LOGGER.info(String.format("Search for [%s] returned 0 results.", filledFilter));
 			return null;
 		}
 
 		List<String> ids = new ArrayList<String>();
 		try {
-			for (Attributes attribute: results) {
+			for (Attributes attribute: accounts) {
 				ids.add((String) attribute.get(this.getPrincipalAttributeName()).get());
 			}
 		} catch (NamingException e) {
@@ -230,14 +130,54 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 		return ids;
 	}
 
-	@Override
+	/**
+	 * Serach in Ldap for attributes.
+	 *
+	 * @param filter the search filter
+	 * @return the list of attributes
+	 */
+	protected final List<Attributes> searchInLdap(final String filter) {
+		final List<Attributes> result = new ArrayList<Attributes>();
+
+		if (LOGGER.isDebugEnabled()) {
+			LOGGER.debug(String.format("Starting LDAP search for filter [%s] ...", filter));
+		}
+		this.getLdapTemplate().search(this.getSearchBase(), filter, this.getSearchControls(), new AttributesMapper() {
+			@Override
+			public Object mapFromAttributes(final Attributes attrs) throws NamingException {
+				if (attrs != null) {
+					result.add(attrs);
+				}
+				return null;
+			}
+		});
+
+		return result;
+	}
+
+
+		@Override
 	public void afterPropertiesSet() throws Exception {
-		super.afterPropertiesSet();
+		Assert.hasText(this.name, "No bean name provided !");
 		Assert.hasText(this.authenticationAllValuesFilter, "No authentication filter on all account values provided !");
 		Assert.hasText(this.authenticationMergedAccountFilter, "No authentication filter on merged account provided !");
 
 		Assert.isTrue(authenticationAllValuesFilter.contains("%u") || authenticationAllValuesFilter.contains("%U"), "authenticationAllValuesFilter filter must contain %u or %U");
 		Assert.isTrue(authenticationMergedAccountFilter.contains("%u") || authenticationMergedAccountFilter.contains("%U"), "authenticationMergedAccountFilter filter must contain %u or %U");
+
+		Assert.notNull(this.ldapTemplate, "No LdapTemplate provided !");
+		Assert.hasText(this.searchBase, "No searchBase provided !");
+		Assert.notNull(this.searchControls, "No searchControls provided !");
+		Assert.notNull(this.principalAttributeName, "No LDAP principal attribute name configured !");
+		this.ldapTemplate.setIgnorePartialResultException(this.ignorePartialResultException);
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(final String name) {
+		this.name = name;
 	}
 
 	public String getAuthenticationAllValuesFilter() {
@@ -254,5 +194,45 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 
 	public void setAuthenticationMergedAccountFilter(final String authenticationMergedAccountFilter) {
 		this.authenticationMergedAccountFilter = authenticationMergedAccountFilter;
+	}
+
+	public LdapTemplate getLdapTemplate() {
+		return ldapTemplate;
+	}
+
+	public void setLdapTemplate(final LdapTemplate ldapTemplate) {
+		this.ldapTemplate = ldapTemplate;
+	}
+
+	public String getSearchBase() {
+		return searchBase;
+	}
+
+	public void setSearchBase(final String searchBase) {
+		this.searchBase = searchBase;
+	}
+
+	public SearchControls getSearchControls() {
+		return searchControls;
+	}
+
+	public void setSearchControls(final SearchControls searchControls) {
+		this.searchControls = searchControls;
+	}
+
+	public String getPrincipalAttributeName() {
+		return principalAttributeName;
+	}
+
+	public void setPrincipalAttributeName(final String principalAttributeName) {
+		this.principalAttributeName = principalAttributeName;
+	}
+
+	public boolean isIgnorePartialResultException() {
+		return ignorePartialResultException;
+	}
+
+	public void setIgnorePartialResultException(final boolean ignorePartialResultException) {
+		this.ignorePartialResultException = ignorePartialResultException;
 	}
 }

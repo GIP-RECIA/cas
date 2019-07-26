@@ -38,6 +38,7 @@ import org.jasig.cas.authentication.handler.support.AbstractPreAndPostProcessing
 import org.jasig.cas.authentication.principal.Credentials;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * Authentication handler which exploits ISaml20Credentials and delegate authentication 
@@ -54,12 +55,12 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 	/** The authentication handler which really handle the authentication. */
 	private List<AuthenticationHandler> backingHandlers;
 
+	/** Not used for MultiAccount management */
 	private ISaml20CredentialsHandler<ISaml20Credentials, Credentials> samlCredsAdaptator;
 	
 	@Override
 	public boolean supports(final Credentials credentials) {
-		return credentials != null && ISaml20Credentials.class.isAssignableFrom(credentials.getClass()) &&
-				samlCredsAdaptator.support((ISaml20Credentials)credentials);
+		return credentials != null && ISaml20Credentials.class.isAssignableFrom(credentials.getClass());
 	}
 
 	@Override
@@ -68,6 +69,11 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 
 		if (credentials != null) {
 			final ISaml20Credentials samlCredentials = (ISaml20Credentials) credentials;
+
+			/** bypass resolution in MultiAccountResolution where it's already done ! */
+			if (AuthenticationStatusEnum.AUTHENTICATED.equals(samlCredentials.getAuthenticationStatus()) && StringUtils.hasText(samlCredentials.getResolvedPrincipalId())){
+				return true;
+			}
 
 			final boolean validated = this.samlCredsAdaptator.validate(samlCredentials);
 			
@@ -89,10 +95,6 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 								if (IInformingCredentials.class.isAssignableFrom(credentials.getClass())) {
 									final IInformingCredentials informingCreds = (IInformingCredentials) adaptedCreds;
 									samlCredentials.setAuthenticationStatus(informingCreds.getAuthenticationStatus());
-								}
-								if (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass())) {
-									final IMultiAccountCredential multiAccountCredential = (IMultiAccountCredential) adaptedCreds;
-									((IMultiAccountCredential)samlCredentials).setResolvedPrincipalIds(multiAccountCredential.getResolvedPrincipalIds());
 								}
 								break;
 							}
