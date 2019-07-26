@@ -18,6 +18,7 @@ import org.esco.sso.security.saml.om.IAuthentication;
 import org.esco.sso.security.saml.om.IIncomingSaml;
 import org.esco.sso.security.saml.query.IQuery;
 import org.esco.sso.security.saml.query.impl.QueryAuthnResponse;
+import org.jasig.cas.authentication.handler.AuthenticationHandler;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.web.flow.AbstractNonInteractiveCredentialsAction;
 import org.jasig.cas.web.support.WebUtils;
@@ -144,15 +145,6 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 		this.saml2Facade.storeAuthCredentialsInCache(tgtId , samlCredentials);
 	}
 
-	public ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> getSamlCredsAdaptator() {
-		return samlCredsAdaptator;
-	}
-
-	public void setSamlCredsAdaptator(ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> samlCredsAdaptator) {
-		this.samlCredsAdaptator = samlCredsAdaptator;
-	}
-
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -171,4 +163,13 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 	public void setSaml2Facade(final ISaml20Facade saml2Facade) {
 		this.saml2Facade = saml2Facade;
 	}
+
+	public ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> getSamlCredsAdaptator() {
+		return samlCredsAdaptator;
+	}
+
+	public void setSamlCredsAdaptator(ISaml20CredentialsAdaptors<ISaml20Credentials, Credentials> samlCredsAdaptator) {
+		this.samlCredsAdaptator = samlCredsAdaptator;
+	}
+
 }

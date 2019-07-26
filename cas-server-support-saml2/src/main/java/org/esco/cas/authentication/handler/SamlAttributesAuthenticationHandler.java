@@ -92,8 +92,6 @@ public class SamlAttributesAuthenticationHandler extends AbstractPreAndPostProce
 								}
 								if (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass())) {
 									final IMultiAccountCredential multiAccountCredential = (IMultiAccountCredential) adaptedCreds;
-									((IMultiAccountCredential)samlCredentials).setOpaqueId(multiAccountCredential.getOpaqueId());
-									((IMultiAccountCredential)samlCredentials).setFederatedIds(multiAccountCredential.getFederatedIds());
 									((IMultiAccountCredential)samlCredentials).setResolvedPrincipalIds(multiAccountCredential.getResolvedPrincipalIds());
 								}
 								break;

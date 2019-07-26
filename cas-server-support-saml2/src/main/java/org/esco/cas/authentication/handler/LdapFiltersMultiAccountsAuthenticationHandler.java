@@ -60,15 +60,6 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 	private String authenticationAllValuesFilter;
 	private String authenticationMergedAccountFilter;
 
-	private String mergedCredentialPattern;
-	private String accountsCredentialPattern;
-
-	private int groupPatternOfMergedCredentialToExtract;
-	private int groupPatternOfAccountsCredentialToExtract;
-
-	private Pattern patternOfMergedCredential;
-	private Pattern patternOfAccountsCredential;
-
 	@Override
 	public boolean supports(final Credentials credentials) {
 		return (credentials != null) && (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass()));
@@ -140,13 +131,13 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 			// construction du filtre avec l'ensemble des attributs du crédential transmis.
 			StringBuilder mainFilter = new StringBuilder("(|");
 			boolean haveCreds = false;
-			for (String cred: this.extractCredentialsOfNotMergedAccount(credentials)) {
+			for (String cred: credentials.getFederatedIds()) {
 				if (StringUtils.hasText(cred)) {
 					mainFilter.append(LdapUtils.getFilterWithValues(this.authenticationAllValuesFilter, cred));
 					haveCreds = true;
 				}
 			}
-			final String mergedCred = extractCredentialOfMergedAccount(credentials);
+			final String mergedCred = credentials.getOpaqueId();
 			if (StringUtils.hasText(mergedCred)) {
 				mainFilter.append(LdapUtils.getFilterWithValues(this.authenticationMergedAccountFilter, mergedCred));
 				haveCreds = true;
@@ -203,33 +194,6 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 		return credentials;
 	}
 
-	protected List<String> extractCredentialsOfNotMergedAccount(final Saml20MultiAccountCredentials credentials){
-		List<String> ids = new ArrayList<String>();
-		for (String cred: credentials.getAttributeValues()) {
-			final Matcher matcher = this.patternOfAccountsCredential.matcher(cred);
-			if (matcher.matches()){
-				final String extract = matcher.group(this.groupPatternOfAccountsCredentialToExtract);
-				if (StringUtils.hasText(extract)) {
-					ids.add(extract);
-				}
-			}
-		}
-		return ids;
-	}
-
-	protected String extractCredentialOfMergedAccount(final Saml20MultiAccountCredentials credentials){
-		for (String cred: credentials.getAttributeValues()) {
-			final Matcher matcher = this.patternOfMergedCredential.matcher(cred);
-			if (matcher.matches()){
-				final String extract = matcher.group(this.groupPatternOfMergedCredentialToExtract);
-				if (StringUtils.hasText(extract)) {
-					return extract;
-				}
-			}
-		}
-		return null;
-	}
-
 	/**
 	 * Search an account bind to the filled ldap filter.
 	 *
@@ -274,16 +238,6 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 
 		Assert.isTrue(authenticationAllValuesFilter.contains("%u") || authenticationAllValuesFilter.contains("%U"), "authenticationAllValuesFilter filter must contain %u or %U");
 		Assert.isTrue(authenticationMergedAccountFilter.contains("%u") || authenticationMergedAccountFilter.contains("%U"), "authenticationMergedAccountFilter filter must contain %u or %U");
-
-		Assert.hasText(this.accountsCredentialPattern, "No pattern provided for accountsCredentialPattern");
-		Assert.hasText(this.mergedCredentialPattern, "No pattern provided for mergedCredentialPattern");
-
-		Assert.isTrue(this.groupPatternOfAccountsCredentialToExtract > 0, "No group provided to extrat the groupPatternOfAccountsCredentialToExtract");
-		Assert.isTrue(this.groupPatternOfMergedCredentialToExtract > 0, "No group provided to extrat the groupPatternOfMergedCredentialToExtract");
-
-		this.patternOfAccountsCredential = Pattern.compile(this.accountsCredentialPattern);
-		this.patternOfMergedCredential = Pattern.compile(this.mergedCredentialPattern);
-
 	}
 
 	public String getAuthenticationAllValuesFilter() {
@@ -301,38 +255,4 @@ public class LdapFiltersMultiAccountsAuthenticationHandler extends AbstractLdapA
 	public void setAuthenticationMergedAccountFilter(final String authenticationMergedAccountFilter) {
 		this.authenticationMergedAccountFilter = authenticationMergedAccountFilter;
 	}
-
-	public String getMergedCredentialPattern() {
-		return mergedCredentialPattern;
-	}
-
-	public void setMergedCredentialPattern(final String mergedCredentialPattern) {
-		this.mergedCredentialPattern = mergedCredentialPattern;
-	}
-
-	public String getAccountsCredentialPattern() {
-		return accountsCredentialPattern;
-	}
-
-	public void setAccountsCredentialPattern(final String accountsCredentialPattern) {
-		this.accountsCredentialPattern = accountsCredentialPattern;
-	}
-
-	public int getGroupPatternOfMergedCredentialToExtract() {
-		return groupPatternOfMergedCredentialToExtract;
-	}
-
-	public void setGroupPatternOfMergedCredentialToExtract(final int groupPatternOfMergedCredentialToExtract) {
-		this.groupPatternOfMergedCredentialToExtract = groupPatternOfMergedCredentialToExtract;
-	}
-
-	public int getGroupPatternOfAccountsCredentialToExtract() {
-		return groupPatternOfAccountsCredentialToExtract;
-	}
-
-	public void setGroupPatternOfAccountsCredentialToExtract(final int groupPatternOfAccountsCredentialToExtract) {
-		this.groupPatternOfAccountsCredentialToExtract = groupPatternOfAccountsCredentialToExtract;
-	}
-
-
 }
