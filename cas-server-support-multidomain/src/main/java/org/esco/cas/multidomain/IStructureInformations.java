@@ -7,6 +7,6 @@ public interface IStructureInformations {
 
     String getStructureName(final String uai);
 
-    /** return the structure Name of the user current structure depending on user attribute configuration.*/
-    String getStructureName(final Map<String, List<String>> userInfos);
+    /** return the user with the current structure informations needed depending on user attribute configuration.*/
+    Map<String, List<String>> applyStructureName(final Map<String, List<String>> userInfos);
 }

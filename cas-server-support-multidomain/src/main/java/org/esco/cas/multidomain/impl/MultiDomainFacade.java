@@ -1,5 +1,6 @@
  package org.esco.cas.multidomain.impl;
  
+ import java.util.ArrayList;
  import java.util.Collection;
  import java.util.HashMap;
  import java.util.HashSet;
@@ -156,9 +157,16 @@
      return null;
    }
 
-   public String getStructureName(final Map<String, List<String>> userInfos){
-     if (userInfos.containsKey(this.getPeopleUaiLdapField())) {
-       return this.getStructureName(userInfos.get(this.getPeopleUaiLdapField()).get(0));
+   public Map<String, List<String>> applyStructureName(final Map<String, List<String>> userInfos){
+     if (userInfos != null && userInfos.containsKey(this.getPeopleUaiLdapField())) {
+       Map<String, List<String>> user = userInfos;
+       String structureName = this.getStructureName(userInfos.get(this.getPeopleUaiLdapField()).get(0));
+       if (StringUtils.hasText(structureName)) {
+         List<String> struct = new ArrayList<String>();
+         struct.add(structureName);
+         user.put("structureName", struct);
+       }
+       return user;
      }
      return null;
    }

@@ -1,7 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.esco.cas</groupId>
     <artifactId>cas-server-support-multidomain</artifactId>
@@ -10,7 +9,7 @@
     <name>Multi domains support</name>
 
     <properties>
-        <cas.version>3.4.11-RC1</cas.version>
+        <cas.version>3.4.12.1</cas.version>
         <junit.version>4.7</junit.version>
         <mockito.version>1.8.5</mockito.version>
         <servlet.api.version>2.5</servlet.api.version>
@@ -22,7 +21,7 @@
         <dependency>
             <groupId>org.esco.cas</groupId>
             <artifactId>cas-server-helper</artifactId>
-            <version>1.0.0</version>
+            <version>[1.0.0,)</version>
             <type>jar</type>
         </dependency>
 
@@ -117,7 +116,7 @@
                         </goals>
                         <configuration>
                             <source>1.6</source>
-                            <target>1.6</target>
+                            <target>1.7</target>
                         </configuration>
                     </execution>
                     <execution>
@@ -128,7 +127,7 @@
                         </goals>
                         <configuration>
                             <source>1.6</source>
-                            <target>1.6</target>
+                            <target>1.7</target>
                         </configuration>
                     </execution>
                 </executions>
