@@ -3,6 +3,7 @@
  */
 package org.esco.cas.web.flow;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -19,15 +20,14 @@ import org.esco.cas.authentication.handler.support.ISaml20CredentialsAdaptors;
 import org.esco.cas.authentication.principal.IMultiAccountCredential;
 import org.esco.cas.authentication.principal.ISaml20Credentials;
 import org.esco.cas.impl.SamlAuthInfo;
+import org.esco.cas.multidomain.IStructureInformations;
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.om.IAuthentication;
 import org.esco.sso.security.saml.om.IIncomingSaml;
 import org.esco.sso.security.saml.query.IQuery;
 import org.esco.sso.security.saml.query.impl.QueryAuthnResponse;
-import org.jasig.cas.authentication.handler.AuthenticationException;
-import org.jasig.cas.authentication.handler.AuthenticationHandler;
 import org.jasig.cas.authentication.principal.Credentials;
-import org.jasig.cas.web.flow.AbstractNonInteractiveCredentialsAction;
+import org.jasig.cas.ticket.TicketException;
 import org.jasig.cas.web.support.WebUtils;
 import org.opensaml.xml.util.Pair;
 import org.springframework.util.Assert;
@@ -49,10 +49,9 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 	/** Saml response data flow scope key. */
 	public static final String SAML_RESPONSE_DATA_FLOW_SCOPE_KEY = "samlResponseData";
 
-	/** Saml credentials flow scope key. */
-	public static final String SAML_CREDENTIALS_FLOW_SCOPE_KEY = "samlCredentials";
-
 	public static final String SAML_MULTIACCOUNT_CHOICE_FLOW_SCOPE_KEY = "samlMultiAccountChoice";
+
+	public static final String SAML_MULTIACCOUNT_CHOICE_RESPONSE_DATA_FLOW_SCOPE_KEY = "chosen_id";
 
 	/** Saml2 Facade. */
 	private ISaml20Facade saml2Facade;
@@ -61,6 +60,8 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 	/** The LDAP MultiAccountRetriever. */
 	private List<IMultiAccountFilterRetrieverHandler> multiAccountRetriever;
+
+	private IStructureInformations structureInformations;
 
 	@Override
 	protected Credentials constructCredentialsFromRequest(final RequestContext context) {		
@@ -109,15 +110,48 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 				saml20Credentials = this.resolveMultiAccount(context, saml20Credentials);
 
+				// selecting a default value to continue the process
+				if (AuthenticationStatusEnum.MULTIPLE_ACCOUNTS.equals(saml20Credentials.getAuthenticationStatus())) {
+					if (IMultiAccountCredential.class.isAssignableFrom(saml20Credentials.getClass())) {
+						String defaultID = ((IMultiAccountCredential)saml20Credentials).getResolvedPrincipalIds().get(0);
+						LOGGER.debug(
+								String.format("Assigning default MultiAccount Authentication with credentials [%s] and default id [%s]!", credentials, defaultID));
+						saml20Credentials.setResolvedPrincipalId(defaultID);
+						saml20Credentials.setAuthenticationStatus(AuthenticationStatusEnum.AUTHENTICATED);
+						LOGGER.info(String.format(
+								"[%s] Successfully authenticated MultiAccount with default id: [%s]",
+								this.getClass().getName(), defaultID));
+					}
+				}
+
 				credentials = saml20Credentials;
 				// Put identity vector credentials in flow scope
 				context.getFlowScope().put(Saml20AuthenticationAction.SAML_CREDENTIALS_FLOW_SCOPE_KEY, saml20Credentials);
+			} else {
+				String chosenId = this.extractChosenAccountFromContext(context);
+				if (chosenId != null) {
+					String tgtId = WebUtils.getTicketGrantingTicketId(context);
+					ISaml20Credentials saml20Credentials = this.saml2Facade.retrieveAuthCredentialsFromCache(tgtId);
 
-				// we simulate an error for the workflow to complete the action
-				if (AuthenticationStatusEnum.MULTIPLE_ACCOUNTS.equals(saml20Credentials.getAuthenticationStatus())) {
-					onSuccess(context, saml20Credentials);
-					error();
+					if (IMultiAccountCredential.class.isAssignableFrom(saml20Credentials.getClass())) {
+						LOGGER.debug(
+								String.format("Entering on selecting a MultiAccount Authentication with credentials [%s] and chosen id [%s]!", saml20Credentials, chosenId));
+						if (!((IMultiAccountCredential)saml20Credentials).getResolvedPrincipalIds().contains(chosenId)) {
+							LOGGER.error(String.format("L'identifiant de multi account choisi [%s] ne fait pas parti de la liste des identifiants autorisés [%s]!",
+									chosenId, ((IMultiAccountCredential)saml20Credentials).getResolvedPrincipalIds()));
+
+						} else {
+							saml20Credentials.setResolvedPrincipalId(chosenId);
+							saml20Credentials.setAuthenticationStatus(AuthenticationStatusEnum.AUTHENTICATED);
+							((IMultiAccountCredential) saml20Credentials).setUserChooseId(chosenId);
+							LOGGER.info(String.format(
+									"[%s] Successfully authenticated MultiAccount with chosen id: [%s]",
+									this.getClass().getName(), chosenId));
+							//this.onSuccess(context, credentials);
+						}
+					}
 				}
+
 			}
 		} catch (Exception e) {
 			Saml20AuthenticationAction.LOGGER.error("Unable to retrieve SAML response from context !", e);
@@ -153,14 +187,29 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 		return authnResp;
 	}
 
+	/**
+	 * Extract the User id choice from context if there is one !
+	 *
+	 * @param context
+	 * @return the QueryAuthnResponse or null
+	 */
+	protected String extractChosenAccountFromContext(final RequestContext context) {
+		// Retrieve the context corresponding id response
+		HttpServletRequest request = WebUtils.getHttpServletRequest(context);
+		final String eventId = request.getParameter("_eventId");
+		if (eventId != null && eventId.equals("performMultiAccountChoice"))
+			return request.getParameter(Saml20AuthenticationAction.SAML_MULTIACCOUNT_CHOICE_RESPONSE_DATA_FLOW_SCOPE_KEY);
+
+		return null;
+	}
+
+
+
 	protected ISaml20Credentials resolveMultiAccount(RequestContext context, final ISaml20Credentials credentials) {
 		if (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass())) {
 			LOGGER.debug(String.format("Entering on resolving a MultiAccount Authentication with credentials [%s]!", credentials));
 			credentials.setAuthenticationStatus(AuthenticationStatusEnum.EMPTY_CREDENTIAL);
 			if (!CollectionUtils.isEmpty(((IMultiAccountCredential)credentials).getFederatedIds())) {
-				if (((IMultiAccountCredential)credentials).getFederatedIds().contains("1814477")) {
-					((IMultiAccountCredential)credentials).getFederatedIds().add("927705");
-				}
 				credentials.setAuthenticationStatus(AuthenticationStatusEnum.NO_ACCOUNT);
 				for (IMultiAccountFilterRetrieverHandler accountHandler: this.multiAccountRetriever) {
 					if (accountHandler.supports(credentials)) {
@@ -173,13 +222,18 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 							if (resolvedIds.size() == 1) {
 								credentials.setResolvedPrincipalId(resolvedIds.get(0));
 								credentials.setAuthenticationStatus(AuthenticationStatusEnum.AUTHENTICATED);
+								((IMultiAccountCredential) credentials).setUserChooseId(credentials.getResolvedPrincipalId());
 								LOGGER.info(String.format(
 										"[%s] Successfully authenticated SAML 2.0 Response with retrieved ids: [%s]",
 										accountHandler.getName(), resolvedIds));
 							} else {
-								Assert.notEmpty(resolvedAccounts);
+								Assert.notEmpty(resolvedAccounts, "Multi accounts resolved is empty");
 								credentials.setAuthenticationStatus(AuthenticationStatusEnum.MULTIPLE_ACCOUNTS);
-								context.getFlowScope().put(SAML_MULTIACCOUNT_CHOICE_FLOW_SCOPE_KEY, resolvedAccounts);
+								List<Map<String, List<String>>> conpletedAccounts = new ArrayList<Map<String, List<String>>>();
+								for (Map<String, List<String>> account: resolvedAccounts) {
+									conpletedAccounts.add(structureInformations.applyStructureName(account));
+								}
+								context.getFlowScope().put(SAML_MULTIACCOUNT_CHOICE_FLOW_SCOPE_KEY, conpletedAccounts);
 								LOGGER.info(String.format(
 										"[%s] Successfully authenticated SAML 2.0 Response with a Multi Account State and retrieved ids: [%s]",
 										accountHandler.getClass().getSimpleName(), resolvedIds));
@@ -214,6 +268,7 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 		//Assert.notNull(this.emailAttributeFriendlyName, "No email attribute friendly name provided !");
 		Assert.notNull(this.saml2Facade, "SAML 2.0 Facade wasn't injected !");
+		Assert.notNull(this.structureInformations, "Property structureInformations wasn't defined !");
 	}
 
 	public ISaml20Facade getSaml2Facade() {
@@ -238,5 +293,13 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 	public void setMultiAccountRetriever(final List<IMultiAccountFilterRetrieverHandler> multiAccountRetriever) {
 		this.multiAccountRetriever = multiAccountRetriever;
+	}
+
+	public IStructureInformations getStructureInformations() {
+		return structureInformations;
+	}
+
+	public void setStructureInformations(final IStructureInformations structureInformations) {
+		this.structureInformations = structureInformations;
 	}
 }

@@ -95,8 +95,6 @@ public abstract class SamlHelper {
 
 
 
-
-
 	/** Char separator for relay state. */
 	public static final String RELAY_STATE_SEPARATOR = "$";
 

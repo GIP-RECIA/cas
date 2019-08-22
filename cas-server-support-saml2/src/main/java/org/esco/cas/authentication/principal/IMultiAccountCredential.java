@@ -14,5 +14,9 @@ public interface IMultiAccountCredential {
 
     List<String> getFederatedIds();
 
-    public void setFederatedIds(final List<String> federatedIds);
+    void setFederatedIds(final List<String> federatedIds);
+
+    boolean isUserChooseId();
+
+    void setUserChooseId(final String userChooseId);
 }

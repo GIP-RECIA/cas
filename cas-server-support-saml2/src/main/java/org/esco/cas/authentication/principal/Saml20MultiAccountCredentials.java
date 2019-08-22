@@ -41,6 +41,8 @@ public class Saml20MultiAccountCredentials extends Saml20Credentials implements 
 
 	private List<String> federatedIds;
 
+	private String userChooseId;
+
 	public Saml20MultiAccountCredentials() {
 		super();
 	}
@@ -77,5 +79,17 @@ public class Saml20MultiAccountCredentials extends Saml20Credentials implements 
 
 	public void setFederatedIds(final List<String> federatedIds) {
 		this.federatedIds = federatedIds;
+	}
+
+	public boolean isUserChooseId() {
+		return userChooseId != null;
+	}
+
+	public void setUserChooseId(final String userChooseId) {
+		this.userChooseId = userChooseId;
+	}
+
+	public String getUserChooseId() {
+		return userChooseId;
 	}
 }
