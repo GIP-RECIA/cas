@@ -4,11 +4,9 @@
 package org.esco.cas.web.flow;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import javax.naming.directory.Attributes;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
@@ -27,7 +25,8 @@ import org.esco.sso.security.saml.om.IIncomingSaml;
 import org.esco.sso.security.saml.query.IQuery;
 import org.esco.sso.security.saml.query.impl.QueryAuthnResponse;
 import org.jasig.cas.authentication.principal.Credentials;
-import org.jasig.cas.ticket.TicketException;
+import org.jasig.cas.web.flow.AbstractNonInteractiveCredentialsAction;
+import org.jasig.cas.authentication.principal.WebApplicationService;
 import org.jasig.cas.web.support.WebUtils;
 import org.opensaml.xml.util.Pair;
 import org.springframework.util.Assert;
@@ -48,6 +47,8 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 
 	/** Saml response data flow scope key. */
 	public static final String SAML_RESPONSE_DATA_FLOW_SCOPE_KEY = "samlResponseData";
+
+	public static final String SAML_CREDENTIALS_FLOW_SCOPE_KEY = "samlCredentials";
 
 	public static final String SAML_MULTIACCOUNT_CHOICE_FLOW_SCOPE_KEY = "samlMultiAccountChoice";
 
@@ -103,6 +104,7 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 				authInfos.setIdpEntityId(idpEntityId);
 				authInfos.setIdpSubject(authentication.getSubjectId());
 				authInfos.setSessionIndex(authentication.getSessionIndex());
+				authInfos.setTargetUrl(WebUtils.getService(context));
 
 				if (samlCredsAdaptator != null && samlCredsAdaptator.support(saml20Credentials) && samlCredsAdaptator.validate(saml20Credentials)) {
 					saml20Credentials = (ISaml20Credentials)samlCredsAdaptator.adapt(saml20Credentials);
@@ -113,7 +115,7 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 				// selecting a default value to continue the process
 				if (AuthenticationStatusEnum.MULTIPLE_ACCOUNTS.equals(saml20Credentials.getAuthenticationStatus())) {
 					if (IMultiAccountCredential.class.isAssignableFrom(saml20Credentials.getClass())) {
-						String defaultID = ((IMultiAccountCredential)saml20Credentials).getResolvedPrincipalIds().get(0);
+						String defaultID = ((IMultiAccountCredential) saml20Credentials).getResolvedPrincipalIds().get(0);
 						LOGGER.debug(
 								String.format("Assigning default MultiAccount Authentication with credentials [%s] and default id [%s]!", credentials, defaultID));
 						saml20Credentials.setResolvedPrincipalId(defaultID);
@@ -131,7 +133,16 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 				String chosenId = this.extractChosenAccountFromContext(context);
 				if (chosenId != null) {
 					String tgtId = WebUtils.getTicketGrantingTicketId(context);
+					if (tgtId == null) {
+						tgtId = this.extractTGTIDFromContext(context);
+					}
+
+					Assert.notNull(tgtId, "The TGT Id cannot be null here !");
+
 					ISaml20Credentials saml20Credentials = this.saml2Facade.retrieveAuthCredentialsFromCache(tgtId);
+
+					final WebApplicationService service = saml20Credentials.getAuthenticationInformations().getTarget();
+					context.getFlowScope().put("service", service);
 
 					if (IMultiAccountCredential.class.isAssignableFrom(saml20Credentials.getClass())) {
 						LOGGER.debug(
@@ -148,10 +159,10 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 									"[%s] Successfully authenticated MultiAccount with chosen id: [%s]",
 									this.getClass().getName(), chosenId));
 							//this.onSuccess(context, credentials);
+							credentials = saml20Credentials;
 						}
 					}
 				}
-
 			}
 		} catch (Exception e) {
 			Saml20AuthenticationAction.LOGGER.error("Unable to retrieve SAML response from context !", e);
@@ -203,7 +214,15 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 		return null;
 	}
 
+	protected String extractTGTIDFromContext(final RequestContext context) {
+		// Retrieve the context corresponding id response
+		HttpServletRequest request = WebUtils.getHttpServletRequest(context);
+		final String eventId = request.getParameter("_eventId");
+		if (eventId != null && eventId.equals("performMultiAccountChoice"))
+			return request.getParameter("ticketGrantingTicketId");
 
+		return null;
+	}
 
 	protected ISaml20Credentials resolveMultiAccount(RequestContext context, final ISaml20Credentials credentials) {
 		if (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass())) {
@@ -255,6 +274,8 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 		String tgtId = WebUtils.getTicketGrantingTicketId(context);
 
 		Assert.notNull(tgtId, "The TGT Id cannot be null here !");
+
+		context.getFlowScope().put("ticketGrantingTicketId", tgtId);
 
 		this.saml2Facade.storeAuthCredentialsInCache(tgtId , samlCredentials);
 	}

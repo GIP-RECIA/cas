@@ -22,6 +22,7 @@ import java.io.Serializable;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jasig.cas.authentication.principal.WebApplicationService;
 
 /**
  * Informations about SAML 2.0 Authentication.
@@ -47,6 +48,8 @@ public class SamlAuthInfo implements Serializable {
 	/** IdP session index. */
 	private String sessionIndex;
 
+	private WebApplicationService target;
+
 	public String getIdpSubject() {
 		return this.subjectId;
 	}
@@ -71,4 +74,11 @@ public class SamlAuthInfo implements Serializable {
 		this.sessionIndex = sessionIndex;
 	}
 
+	public WebApplicationService getTarget() {
+		return target;
+	}
+
+	public void setTargetUrl(final WebApplicationService target) {
+		this.target = target;
+	}
 }

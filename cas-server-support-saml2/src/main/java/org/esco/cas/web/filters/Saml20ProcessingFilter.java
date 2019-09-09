@@ -67,7 +67,7 @@ public class Saml20ProcessingFilter implements Filter {
 					requestDispatcher.forward(chainingRequest, response);
 					return;
 				} catch (Throwable e) {
-					Saml20ProcessingFilter.LOGGER.error("Error while processing SAML 2.0 incoming request !", e);
+					Saml20ProcessingFilter.LOGGER.error("Error while processing SAML 2.0 incoming request ! " + httpRequest.getRequestURL(), e);
 				}
 			}
 		}
