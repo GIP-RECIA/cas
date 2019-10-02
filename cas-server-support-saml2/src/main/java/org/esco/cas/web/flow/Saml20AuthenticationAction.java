@@ -257,6 +257,8 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 										"[%s] Successfully authenticated SAML 2.0 Response with a Multi Account State and retrieved ids: [%s]",
 										accountHandler.getClass().getSimpleName(), resolvedIds));
 							}
+						} else {
+							LOGGER.warn(String.format("MultiAccount credentials returned no available account from [%s]!",credentials.getAttributeValues()));
 						}
 					}
 				}
