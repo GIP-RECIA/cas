@@ -25,14 +25,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.esco.cas.authentication.exception.AbstractCredentialsException;
-import org.esco.cas.authentication.exception.EmptyCredentialsException;
-import org.esco.cas.authentication.exception.NoAccountCredentialsException;
 import org.esco.cas.authentication.handler.support.IMultiAccountFilterRetrieverHandler;
 import org.esco.cas.authentication.principal.IMultiAccountCredential;
-import org.esco.cas.authentication.principal.IResolvingCredentials;
-import org.esco.cas.authentication.principal.Saml20MultiAccountCredentials;
-import org.jasig.cas.authentication.handler.AuthenticationException;
 import org.jasig.cas.authentication.principal.Credentials;
 import org.jasig.cas.util.LdapUtils;
 import org.opensaml.xml.util.Pair;
