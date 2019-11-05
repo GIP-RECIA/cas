@@ -30,6 +30,9 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Specific IdP config for CAS itself.
  * 
@@ -193,5 +196,15 @@ public class CasIdpConfig implements IIdpConfig {
 	@Override
 	public boolean isUseFriendlyName() {
 		return false;
+	}
+
+	@Override
+	public Map<String,String> getExternalUrlIdpSloUrls() {
+		return null;
+	}
+
+	@Override
+	public List<String> getIframeIdpSloUrls() {
+		return null;
 	}
 }

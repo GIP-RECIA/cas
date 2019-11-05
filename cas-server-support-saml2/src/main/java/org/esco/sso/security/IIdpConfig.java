@@ -19,6 +19,8 @@
 package org.esco.sso.security;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 import org.esco.sso.security.saml.ISaml20IdpConnector;
 import org.esco.sso.security.saml.SamlBindingEnum;
@@ -130,5 +132,11 @@ public interface IIdpConfig extends Serializable {
 	 * @return boolean
 	 */
 	boolean isUseFriendlyName();
+
+	/** List of externalUrlCall to make when configured. */
+	Map<String,String> getExternalUrlIdpSloUrls();
+
+	/** List of iframeCall to make when configured. */
+	List<String> getIframeIdpSloUrls();
 	
 }

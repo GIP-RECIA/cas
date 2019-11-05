@@ -18,6 +18,8 @@
  */
 package org.esco.sso.security.impl;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,6 +119,13 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	/** Idp endpoints URL for Single Logout. */
 	private Map<SamlBindingEnum, String> idpSloEndpointUrl = new HashMap<SamlBindingEnum, String>();
 
+	/** Custom Idp urls to call for SLO when no endpoint is working associated to an id name for i18n. */
+	private List<String> ajaxIdpSloUrls = new ArrayList<String>();
+	private Map<String,String> externalUrlIdpSloUrls = new HashMap<String, String>();
+
+	/** Custom Idp url to call for SLO when no endpoint is working. */
+	private List<String> iframeIdpSloUrls = new ArrayList<String>();
+
 	/** Global Wayf Config. */
 	private IWayfConfig wayfConfig;
 
@@ -192,6 +201,7 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 	public String getIdpSloEndpointUrl(final SamlBindingEnum binding) {
 		return this.idpSloEndpointUrl.get(binding);
 	}
+
 	/**
 	 * Build a signature trust engine based on a metadata provider.
 	 * 
@@ -445,5 +455,29 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 
 	public void setUseFriendlyName(final boolean useFriendlyName) {
 		this.useFriendlyName = useFriendlyName;
+	}
+
+	@Override
+	public Map<String, String> getExternalUrlIdpSloUrls() {
+		return this.externalUrlIdpSloUrls;
+	}
+
+	public void setAjaxIdpSloUrls(final List<String> ajaxIdpSloUrls) {
+		this.ajaxIdpSloUrls = ajaxIdpSloUrls;
+		for (String url: ajaxIdpSloUrls) {
+			final String[] txt = url.split("\\|");
+			if (txt.length == 2) {
+				this.externalUrlIdpSloUrls.put(txt[0], txt[1]);
+			}
+		}
+	}
+
+	@Override
+	public List<String> getIframeIdpSloUrls() {
+		return this.iframeIdpSloUrls;
+	}
+
+	public void setIframeIdpSloUrls(final List<String> iframeIdpSloUrls) {
+		this.iframeIdpSloUrls = iframeIdpSloUrls;
 	}
 }
