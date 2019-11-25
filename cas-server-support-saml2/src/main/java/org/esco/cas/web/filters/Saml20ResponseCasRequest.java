@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.esco.cas.web.flow.Saml20AuthenticationAction;
 import org.esco.sso.security.saml.ISaml20SpProcessor;
+import org.esco.sso.security.saml.exception.IDPInitiatedRequestException;
 import org.esco.sso.security.saml.exception.SamlProcessingException;
 import org.esco.sso.security.saml.exception.UnsupportedSamlOperation;
 import org.esco.sso.security.saml.om.IIncomingSaml;
@@ -60,7 +61,7 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 
 	@SuppressWarnings("unchecked")
 	protected Saml20ResponseCasRequest(final HttpServletRequest request)
-			throws SamlProcessingException, UnsupportedSamlOperation {
+			throws SamlProcessingException, UnsupportedSamlOperation, IDPInitiatedRequestException {
 		super(request);
 
 		// Unlock the map
@@ -79,6 +80,9 @@ public class Saml20ResponseCasRequest extends HttpServletRequestWrapper {
 				// The incoming message is a SAML Authn Response
 				final QueryAuthnResponse authnResp = (QueryAuthnResponse) samlQuery;
 				final QueryAuthnRequest authnReq = authnResp.getOriginalRequest();
+				if (authnReq == null) {
+					throw new IDPInitiatedRequestException(this.parameters);
+				}
 				Assert.notNull(authnReq, "No initial Authn Req request corresponding to SAML response found !");
 
 				// Retrieve initial params

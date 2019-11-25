@@ -147,13 +147,19 @@ public class AuthnResponseQueryProcessor extends BaseOpenSaml2QueryProcessor<Que
 		final Response authnResponse = this.getOpenSamlObject();
 		Assert.notNull(this.authentications, "Authentications list wasn't build yet !");
 
-		final String inResponseToId = authnResponse.getInResponseTo();
-		final QueryAuthnRequest originalRequest =
-				this.checkResponseLegitimacy(inResponseToId, QueryAuthnRequest.class);
-
 		QueryAuthnResponse query = new QueryAuthnResponse(authnResponse.getID());
-		query.setInResponseToId(inResponseToId);
-		query.setOriginalRequest(originalRequest);
+
+		final String inResponseToId = authnResponse.getInResponseTo();
+		if (inResponseToId != null) {
+			final QueryAuthnRequest originalRequest =
+					this.checkResponseLegitimacy(inResponseToId, QueryAuthnRequest.class);
+
+			query.setInResponseToId(inResponseToId);
+			query.setOriginalRequest(originalRequest);
+		} else {
+			logger.warn("AuthnResponse doesn't have InResponseTo ! {}", this.getHttpRequest(), this.assertions);
+		}
+
 		query.setSamlAuthentications(this.authentications);
 
 		return query;
@@ -294,8 +300,6 @@ public class AuthnResponseQueryProcessor extends BaseOpenSaml2QueryProcessor<Que
 	 * Extract the authentications informations from opensaml Authn Response.
 	 * 
 	 * @param authnResponse
-	 * @param idpConnector
-	 * @param responseSigned
 	 * @return a list of authentications embeded in the Authn Response
 	 * @throws UnsupportedSamlOperation
 	 * @throws SamlSecurityException

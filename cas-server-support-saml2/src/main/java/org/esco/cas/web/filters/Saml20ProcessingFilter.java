@@ -28,9 +28,11 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.esco.sso.security.saml.exception.IDPInitiatedRequestException;
 import org.esco.sso.security.saml.util.SamlHelper;
 
 /**
@@ -57,17 +59,28 @@ public class Saml20ProcessingFilter implements Filter {
 			HttpServletRequest httpRequest = (HttpServletRequest) request;
 			if(SamlHelper.isSamlResponse(httpRequest) || SamlHelper.isSamlRequest(httpRequest)) {
 				// If it's a SAML 2.0 Response
-				Saml20ProcessingFilter.LOGGER.debug("Start processing SAML 2.0 incoming request ...");
+				LOGGER.debug("Start processing SAML 2.0 incoming request ...");
 				try {
 					// Replace the request with the SAML 2.0 Response one.
 					chainingRequest = new Saml20ResponseCasRequest(httpRequest);
 
 					// Forward
-					RequestDispatcher requestDispatcher=chainingRequest.getRequestDispatcher("/login");
+					RequestDispatcher requestDispatcher = chainingRequest.getRequestDispatcher("/login");
 					requestDispatcher.forward(chainingRequest, response);
 					return;
+				} catch (IDPInitiatedRequestException idpex) {
+					// see to make a redirect on IDPInitiatedContext
+					LOGGER.info("Processing SAML 2.0 IDPInitiated saml request " + httpRequest.getRequestURL(), idpex);
+					if (idpex.getRequestParams() != null && idpex.getRequestParams().containsKey("RelayState")) {
+						HttpServletResponse resp = (HttpServletResponse) response;
+						resp.sendRedirect(idpex.getRequestParams().get("RelayState")[0]);
+						LOGGER.info("As IDPInitiated request detected we will do a redirect to " + idpex.getRequestParams().get("RelayState")[0]);
+						return;
+					}
+					LOGGER.error(String.format("IDPInitiatedRequestException without redirect detected, request have params names %s, and values %s from request %s ",
+							idpex.getRequestParams().keySet(),  idpex.getRequestParams().values(), httpRequest.getRequestURL()), idpex);
 				} catch (Throwable e) {
-					Saml20ProcessingFilter.LOGGER.error("Error while processing SAML 2.0 incoming request ! " + httpRequest.getRequestURL(), e);
+					LOGGER.error("Error while processing SAML 2.0 incoming request ! " + httpRequest.getRequestURL(), e);
 				}
 			}
 		}
