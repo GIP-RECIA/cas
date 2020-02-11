@@ -31,6 +31,7 @@ import org.jasig.cas.web.support.WebUtils;
 import org.opensaml.xml.util.Pair;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.webflow.execution.RequestContext;
 
 /**
@@ -110,7 +111,7 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 					saml20Credentials = (ISaml20Credentials)samlCredsAdaptator.adapt(saml20Credentials);
 				}
 
-				saml20Credentials = this.resolveMultiAccount(context, saml20Credentials);
+				saml20Credentials = this.resolveMultiAccount(context, saml20Credentials, isSaml20IdpConnector.getIdpConfig().isAcceptAuthFromOpaqueID());
 
 				// selecting a default value to continue the process
 				if (AuthenticationStatusEnum.MULTIPLE_ACCOUNTS.equals(saml20Credentials.getAuthenticationStatus())) {
@@ -224,11 +225,12 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 		return null;
 	}
 
-	protected ISaml20Credentials resolveMultiAccount(RequestContext context, final ISaml20Credentials credentials) {
+	protected ISaml20Credentials resolveMultiAccount(RequestContext context, final ISaml20Credentials credentials, final boolean acceptAuthFromOpaqueID) {
 		if (IMultiAccountCredential.class.isAssignableFrom(credentials.getClass())) {
 			LOGGER.debug(String.format("Entering on resolving a MultiAccount Authentication with credentials [%s]!", credentials));
 			credentials.setAuthenticationStatus(AuthenticationStatusEnum.EMPTY_CREDENTIAL);
-			if (!CollectionUtils.isEmpty(((IMultiAccountCredential)credentials).getFederatedIds())) {
+			if (!CollectionUtils.isEmpty(((IMultiAccountCredential)credentials).getFederatedIds()) ||
+					(StringUtils.hasText(((IMultiAccountCredential)credentials).getOpaqueId()) && acceptAuthFromOpaqueID)) {
 				credentials.setAuthenticationStatus(AuthenticationStatusEnum.NO_ACCOUNT);
 				for (IMultiAccountFilterRetrieverHandler accountHandler: this.multiAccountRetriever) {
 					if (accountHandler.supports(credentials)) {
@@ -262,6 +264,8 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 						}
 					}
 				}
+			} else {
+				LOGGER.warn(String.format("MultiAccount credentials returned no available Ids from [%s]!",credentials.getAttributeValues()));
 			}
 		}
 		return credentials;

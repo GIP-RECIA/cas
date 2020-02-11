@@ -207,4 +207,9 @@ public class CasIdpConfig implements IIdpConfig {
 	public List<String> getIframeIdpSloUrls() {
 		return null;
 	}
+
+	@Override
+	public boolean isAcceptAuthFromOpaqueID() {
+		return false;
+	}
 }

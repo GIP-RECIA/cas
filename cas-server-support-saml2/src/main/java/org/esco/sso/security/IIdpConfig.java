@@ -138,5 +138,7 @@ public interface IIdpConfig extends Serializable {
 
 	/** List of iframeCall to make when configured. */
 	List<String> getIframeIdpSloUrls();
-	
+
+	boolean isAcceptAuthFromOpaqueID();
+
 }

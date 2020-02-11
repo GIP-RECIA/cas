@@ -134,6 +134,8 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 
 	private boolean useFriendlyName;
 
+	private boolean acceptAuthFromOpaqueID;
+
 	/**
 	 * Retrieve current HTTP Request.
 	 * 
@@ -479,5 +481,14 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 
 	public void setIframeIdpSloUrls(final List<String> iframeIdpSloUrls) {
 		this.iframeIdpSloUrls = iframeIdpSloUrls;
+	}
+
+	@Override
+	public boolean isAcceptAuthFromOpaqueID() {
+		return acceptAuthFromOpaqueID;
+	}
+
+	public void setAcceptAuthFromOpaqueID(final boolean acceptAuthFromOpaqueID) {
+		this.acceptAuthFromOpaqueID = acceptAuthFromOpaqueID;
 	}
 }
