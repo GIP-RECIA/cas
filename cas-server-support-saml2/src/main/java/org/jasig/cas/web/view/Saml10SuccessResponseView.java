@@ -76,6 +76,9 @@ public final class Saml10SuccessResponseView extends AbstractSaml10ResponseView 
 
 	public static final String AUTHN_METHOD_UNSPECIFIED = "urn:oasis:names:tc:SAML:1.0:am:unspecified";
 
+	private static final String MODEL_PRINCIPAL_ID = "principalToUse";
+	public static final String FILTER_ATTRIBUTE = "filterAttribute";
+
 	private final XSStringBuilder attrValueBuilder = new XSStringBuilder();
 
 	/** The issuer, generally the hostname. */
@@ -104,12 +107,15 @@ public final class Saml10SuccessResponseView extends AbstractSaml10ResponseView 
 		assertion.setIssueInstant(issuedAt);
 		assertion.setIssuer(this.issuer);
 		assertion.setConditions(this.newConditions(issuedAt, service.getId()));
-		final AuthenticationStatement authnStatement = this.newAuthenticationStatement(authentication);
+		final String principalId = (String) model.get(MODEL_PRINCIPAL_ID);
+		final String principalToFilter = (String) model.get(FILTER_ATTRIBUTE);
+		final AuthenticationStatement authnStatement = this.newAuthenticationStatement(authentication, principalId);
 		assertion.getAuthenticationStatements().add(authnStatement);
-		final Map<String, Object> attributes = authentication.getPrincipal().getAttributes();
+		Map<String, Object> attributes = authentication.getPrincipal().getAttributes();
+		attributes.remove(principalToFilter);
 		if (!attributes.isEmpty() || isRemembered) {
 			assertion.getAttributeStatements().add(
-					this.newAttributeStatement(this.newSubject(authentication.getPrincipal().getId()), attributes, isRemembered));
+					this.newAttributeStatement(this.newSubject(principalId), attributes, isRemembered));
 		}
 		response.setStatus(this.newStatus(StatusCode.SUCCESS, null));
 		response.getAssertions().add(assertion);
@@ -140,7 +146,7 @@ public final class Saml10SuccessResponseView extends AbstractSaml10ResponseView 
 		return subject;
 	}
 
-	private AuthenticationStatement newAuthenticationStatement(final Authentication authentication) {
+	private AuthenticationStatement newAuthenticationStatement(final Authentication authentication, final String principalId) {
 		final String authenticationMethod = (String) authentication.getAttributes().get(
 				SamlAuthenticationMetaDataPopulator.ATTRIBUTE_AUTHENTICATION_METHOD);
 		final AuthenticationStatement authnStatement = this.newSamlObject(AuthenticationStatement.class);
@@ -149,7 +155,7 @@ public final class Saml10SuccessResponseView extends AbstractSaml10ResponseView 
 				authenticationMethod != null
 				? authenticationMethod
 						: Saml10SuccessResponseView.AUTHN_METHOD_UNSPECIFIED);
-		authnStatement.setSubject(this.newSubject(authentication.getPrincipal().getId()));
+		authnStatement.setSubject(this.newSubject(principalId));
 		return authnStatement;
 	}
 

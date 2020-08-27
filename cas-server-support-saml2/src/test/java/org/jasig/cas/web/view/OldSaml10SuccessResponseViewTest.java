@@ -101,7 +101,7 @@ public class OldSaml10SuccessResponseViewTest {
 		Authentication authentication = this.buildAuthentication();
 		Assertion assertion = this.buildAssertion(authentication, true);
 
-		String xmlResponse = this.responseView.buildSaml10SuccessResponse(assertion, authentication);
+		String xmlResponse = this.responseView.buildSaml10SuccessResponse(assertion, authentication, null,null);
 
 		Assert.assertNotNull("The xml response cannot be null !", xmlResponse);
 

@@ -168,7 +168,7 @@ public abstract class OpenSamlCompatibilityHelper {
 	 */
 	public static org.opensaml.saml1.core.Assertion buildAssertion(final Authentication authentication,
 			final Service service, final Assertion assertion, final String issuer,
-			final long issueLength, final String rememberMeAttributeName)
+			final long issueLength, final String rememberMeAttributeName, final String principalId, final String filteredAttribute)
 					throws SAMLException {
 
 		final DateTime currentDate = new DateTime();
@@ -212,13 +212,13 @@ public abstract class OpenSamlCompatibilityHelper {
 			final AttributeStatement attributeStatement =
 					OpenSamlCompatibilityHelper.buildSamlObject(AttributeStatement.DEFAULT_ELEMENT_NAME);
 
-			attributeStatement.setSubject(OpenSamlCompatibilityHelper.buildNewSamlSubject(authentication));
+			attributeStatement.setSubject(OpenSamlCompatibilityHelper.buildNewSamlSubject(principalId));
 			samlAssertion.getStatements().add(attributeStatement);
 
 			for (final Entry<String, Object> e : authentication.getPrincipal().getAttributes().entrySet()) {
 				Attribute attribute = OpenSamlCompatibilityHelper.buildAttribute(e.getKey(),
 						OpenSamlCompatibilityHelper.CAS_NAMESPACE, e.getValue());
-				if (attribute != null) {
+				if (attribute != null && !e.getKey().equalsIgnoreCase(filteredAttribute)) {
 					attributeStatement.getAttributes().add(attribute);
 				}
 			}
@@ -245,7 +245,7 @@ public abstract class OpenSamlCompatibilityHelper {
 			authStatement.setAuthenticationMethod(OpenSamlCompatibilityHelper.AUTHN_METHOD_UNSPECIFIED);
 		}
 		// Subject
-		authStatement.setSubject(OpenSamlCompatibilityHelper.buildNewSamlSubject(authentication));
+		authStatement.setSubject(OpenSamlCompatibilityHelper.buildNewSamlSubject(principalId));
 
 		return samlAssertion;
 	}
@@ -283,8 +283,8 @@ public abstract class OpenSamlCompatibilityHelper {
 		return attribute;
 	}
 
-	public static Subject buildNewSamlSubject(final Authentication authentication) throws SAMLException {
-		return OpenSamlCompatibilityHelper.buildSubject(authentication.getPrincipal().getId(),
+	public static Subject buildNewSamlSubject(final String principalId) throws SAMLException {
+		return OpenSamlCompatibilityHelper.buildSubject(principalId,
 				OpenSamlCompatibilityHelper.ARTIFACT_CONF_METHOD_URI);
 	}
 

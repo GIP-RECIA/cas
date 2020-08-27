@@ -52,6 +52,10 @@ public class OldSaml10SuccessResponseView extends AbstractCasView {
 
 	private static final String REMEMBER_ME_ATTRIBUTE_NAME = "longTermAuthenticationRequestTokenUsed";
 
+	private static final String MODEL_PRINCIPAL_ID = "principalToUse";
+
+	public static final String FILTER_ATTRIBUTE = "filterAttribute";
+
 	/** The issuer, generally the hostname. */
 	@NotNull
 	private String issuer;
@@ -71,8 +75,10 @@ public class OldSaml10SuccessResponseView extends AbstractCasView {
 		try {
 			final Assertion assertion = this.getAssertionFrom(model);
 			final Authentication authentication = assertion.getChainedAuthentications().get(0);
+			final String principalId = (String) model.get(MODEL_PRINCIPAL_ID);
+			final String principalFiltered = (String) model.get(FILTER_ATTRIBUTE);
 
-			String xmlResponse = this.buildSaml10SuccessResponse(assertion, authentication);
+			String xmlResponse = this.buildSaml10SuccessResponse(assertion, authentication, principalId, principalFiltered);
 
 			if (StringUtils.hasText(xmlResponse)) {
 
@@ -103,7 +109,7 @@ public class OldSaml10SuccessResponseView extends AbstractCasView {
 	}
 
 	protected String buildSaml10SuccessResponse(final Assertion assertion,
-			final Authentication authentication) throws MarshallingException, SAMLException {
+			final Authentication authentication, final String principalId, final String filteredAttribute) throws MarshallingException, SAMLException {
 		String xmlResponse = null;
 
 		final Service service = assertion.getService();
@@ -125,7 +131,7 @@ public class OldSaml10SuccessResponseView extends AbstractCasView {
 
 			final org.opensaml.saml1.core.Assertion samlAssertion =
 					OpenSamlCompatibilityHelper.buildAssertion(authentication,
-							service, assertion, this.issuer, this.issueLength, this.rememberMeAttributeName);
+							service, assertion, this.issuer, this.issueLength, this.rememberMeAttributeName, principalId, filteredAttribute);
 			samlResponse.getAssertions().add(samlAssertion);
 
 			Status status = OpenSamlCompatibilityHelper.buildStatus(OpenSamlCompatibilityHelper.STATUS_CODE_SUCCESS, null);
