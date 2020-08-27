@@ -133,10 +133,10 @@ public class Saml20AuthenticationAction extends AbstractNonInteractiveCredential
 			} else {
 				String chosenId = this.extractChosenAccountFromContext(context);
 				if (chosenId != null) {
-					String tgtId = WebUtils.getTicketGrantingTicketId(context);
-					if (tgtId == null) {
-						tgtId = this.extractTGTIDFromContext(context);
-					}
+					/*String tgtId = WebUtils.getTicketGrantingTicketId(context);
+					if (tgtId == null) {*/
+						String tgtId = this.extractTGTIDFromContext(context);
+					//}
 
 					Assert.notNull(tgtId, "The TGT Id cannot be null here !");
 
