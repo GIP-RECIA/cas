@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import javax.naming.NamingEnumeration;
 import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
@@ -55,7 +58,7 @@ public class MultiDomainFacade implements IMultiDomainFacade, IStructureInformat
     private int scope = 2;
 
 
-    private Map<String, String> uaiDomainNameMapping;
+    private Map<String, Set<String>> uaiDomainNameMapping;
 
     private Map<String, String> uaiNameMapping;
 
@@ -120,13 +123,13 @@ public class MultiDomainFacade implements IMultiDomainFacade, IStructureInformat
                 String currentServiceId = service.getId();
                 String tgtId = WebUtils.getTicketGrantingTicketId(context);
 
-                String serviceDomainNameToRedirect = findAuthorizedDomainToRedirect(tgtId, mdService);
+                Set<String> serviceDomainNameToRedirect = findAuthorizedDomainToRedirect(tgtId, mdService);
                 String currentDomain = CasHelper.extractDomainName(currentServiceId);
-                if ((StringUtils.hasText(serviceDomainNameToRedirect)) && (!serviceDomainNameToRedirect.equals(currentDomain))) {
-                    mdwaService.setDomainToRedirect(serviceDomainNameToRedirect);
+                if (!serviceDomainNameToRedirect.isEmpty() && !serviceDomainNameToRedirect.contains(currentDomain)) {
+                    mdwaService.setDomainToRedirect((String)org.apache.commons.collections.CollectionUtils.get(serviceDomainNameToRedirect, 0));
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug(String.format("MultiDomainService [%s] is redirected to authorized domain name [%s].",
-                                new Object[] { currentServiceId, serviceDomainNameToRedirect }));
+                                currentServiceId, serviceDomainNameToRedirect.toString()));
                     }
                 }
             }
@@ -170,31 +173,41 @@ public class MultiDomainFacade implements IMultiDomainFacade, IStructureInformat
         return authOk;
     }
 
-    protected String findAuthorizedDomainToRedirect(String tgtId, MultiDomainService service) {
+    protected Set<String> findAuthorizedDomainToRedirect(String tgtId, MultiDomainService service) {
         LOGGER.debug("Searching for an authorized domain name to redirect...");
-        String serviceDomainNameToRedirect = null;
+        Set<String> serviceDomainNameToRedirect = null;
 
         LoginInformations infos = loadLoginInformations(tgtId);
-        String uaiDomainName;
+        Set<String> uaiDomainNames;
         if (infos != null) {
             String sessionUai = infos.getSessionUai();
             if (StringUtils.hasText(sessionUai)) {
-                uaiDomainName = (String)this.uaiDomainNameMapping.get(sessionUai);
+                uaiDomainNames = (Set<String>)this.uaiDomainNameMapping.get(sessionUai);
 
-                if ((StringUtils.hasText(uaiDomainName)) && (service.getMultiDomainConfig().getDomains().contains(uaiDomainName))) {
-                    serviceDomainNameToRedirect = uaiDomainName;
-                    LOGGER.debug(String.format("Found a domain to redirect: [%s]", new Object[] { serviceDomainNameToRedirect }));
-                }
-
+                // For env test to override specific domains
                 if (this.alternateDomainNames != null) {
-                    for (String domain : service.getMultiDomainConfig().getDomains()) {
-                        String alternate = (String)this.alternateDomainNames.get(domain);
-                        if ((StringUtils.hasText(uaiDomainName)) && (uaiDomainName.equals(alternate))) {
-                            serviceDomainNameToRedirect = domain;
-                            LOGGER.debug(String.format("Found an alternate domain to redirect (test env. feature): [%s]", new Object[] { serviceDomainNameToRedirect }));
-                            break;
+                    Set<String> overridedDomains = new HashSet<String>();
+                    for (String domain: uaiDomainNames) {
+                        for (Map.Entry<String, String> entry : this.alternateDomainNames.entrySet()) {
+                            if (entry.getValue().equals(domain)) {
+                                overridedDomains.add(entry.getKey());
+                                break;
+                            }
                         }
                     }
+                    if (!CollectionUtils.isEmpty(overridedDomains)) {
+                        uaiDomainNames = overridedDomains;
+                        LOGGER.debug(String.format("Found an alternate domain list to redirect (test env. feature): [%s]", uaiDomainNames.toString()));
+                    }
+                }
+
+                final List<String> commonDomaines = (List<String>)org.apache.commons.collections.CollectionUtils.intersection(service.getMultiDomainConfig().getDomains(),uaiDomainNames);
+
+                if (!CollectionUtils.isEmpty(commonDomaines)) {
+                    serviceDomainNameToRedirect = new HashSet<String>(commonDomaines);
+                    LOGGER.debug(String.format("Found a domain list to redirect: [%s]", serviceDomainNameToRedirect.toString()));
+                } else {
+                    LOGGER.error(String.format("No domain found to redirect from: [%s]", uaiDomainNames.toString()));
                 }
             }
         }
@@ -215,14 +228,14 @@ public class MultiDomainFacade implements IMultiDomainFacade, IStructureInformat
             if (!CollectionUtils.isEmpty(userCurrentUaiValues)) {
                 userCurrentUai = (String)userCurrentUaiValues.iterator().next();
             }
-            LOGGER.debug(String.format("User current UAI: [%s]", new Object[] { userCurrentUai }));
+            LOGGER.debug(String.format("User current UAI: [%s]", userCurrentUai));
 
             List<String> domainsValues = TicketHelper.findAttributeValuesInTgt(tgt, this.peopleDomainsLdapField);
             if (!CollectionUtils.isEmpty(domainsValues)) {
                 userAuthorizedDomains = new HashSet();
                 userAuthorizedDomains.addAll(domainsValues);
             }
-            LOGGER.debug(String.format("User authorized Domains: [%s]", new Object[] { userAuthorizedDomains.toString() }));
+            LOGGER.debug(String.format("User authorized Domains: [%s]", userAuthorizedDomains.toString()));
 
             List<String> userCurrentDnValues = TicketHelper.findAttributeValuesInTgt(tgt, this.peopleDnLdapField);
             if (!CollectionUtils.isEmpty(userCurrentDnValues)) {
@@ -249,7 +262,7 @@ public class MultiDomainFacade implements IMultiDomainFacade, IStructureInformat
     }
 
     protected void loadUaiDomainNameMapping() {
-        this.uaiDomainNameMapping = new HashMap<String, String>();
+        this.uaiDomainNameMapping = new HashMap<String, Set<String>>();
         this.uaiNameMapping = new HashMap<String, String>();
 
         String[] attributes = { this.structureUaiLdapField, this.structureDomainLdapField, this.structureNameLdapField };
@@ -264,15 +277,26 @@ public class MultiDomainFacade implements IMultiDomainFacade, IStructureInformat
 
                 if ((uaiAttr != null) && (domainAttr != null) && nameAttr != null) {
                     try {
-                        String uai = (String)uaiAttr.get();
-                        String domain = (String)domainAttr.get();
-                        String name = (String)nameAttr.get();
+                        final String uai = (String)uaiAttr.get();
 
-                        if ((StringUtils.hasText(uai)) && (StringUtils.hasText(domain))) {
-                            this.uaiDomainNameMapping.put(uai, domain);
-                        }
-                        if (StringUtils.hasText(uai) && StringUtils.hasText(name)){
-                            this.uaiNameMapping.put(uai, name);
+                        if (StringUtils.hasText(uai)) {
+
+                            final String name = (String)nameAttr.get();
+
+                            Set<String> domains = new HashSet<String>();
+                            for (NamingEnumeration<String> ae = (NamingEnumeration<String>)domainAttr.getAll(); ae.hasMore();) {
+                                final String val = (String) ae.next();
+                                if (StringUtils.hasText(val)) {
+                                    domains.add(val);
+                                }
+                            }
+
+                            if (!CollectionUtils.isEmpty(domains)) {
+                                this.uaiDomainNameMapping.put(uai, domains);
+                            }
+                            if (StringUtils.hasText(name)){
+                                this.uaiNameMapping.put(uai, name);
+                            }
                         }
                     } catch (Exception e) {
                         LOGGER.warn("Error while building UAI -> Domain name mapping !", e);
