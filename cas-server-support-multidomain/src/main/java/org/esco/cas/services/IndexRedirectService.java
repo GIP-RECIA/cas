@@ -22,6 +22,8 @@ public class IndexRedirectService extends RegisteredServiceImpl implements Initi
 
     private boolean forceRedirection = true;
 
+    private Map<String, List<String>> filteredUsers;
+
     public boolean matches(Service service) {
         if (service != null) {
             Pattern p = Pattern.compile(getServiceId(), 2);
@@ -67,5 +69,13 @@ public class IndexRedirectService extends RegisteredServiceImpl implements Initi
     public void setForceRedirection(boolean forceRedirection)
     {
         this.forceRedirection = forceRedirection;
+    }
+
+    public Map<String, List<String>> getFilteredUsers() {
+        return filteredUsers;
+    }
+
+    public void setFilteredUsers(Map<String, List<String>> filteredUsers) {
+        this.filteredUsers = filteredUsers;
     }
 }
