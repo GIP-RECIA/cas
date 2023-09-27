@@ -136,6 +136,8 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 
 	private boolean acceptAuthFromOpaqueID;
 
+	private boolean doRedirectForSLO;
+
 	/**
 	 * Retrieve current HTTP Request.
 	 * 
@@ -490,5 +492,13 @@ public class BasicIdpConfig implements IIdpConfig, InitializingBean {
 
 	public void setAcceptAuthFromOpaqueID(final boolean acceptAuthFromOpaqueID) {
 		this.acceptAuthFromOpaqueID = acceptAuthFromOpaqueID;
+	}
+
+	public boolean isDoRedirectForSLO() {
+		return doRedirectForSLO;
+	}
+
+	public void setDoRedirectForSLO(final boolean doRedirectForSLO) {
+		this.doRedirectForSLO = doRedirectForSLO;
 	}
 }

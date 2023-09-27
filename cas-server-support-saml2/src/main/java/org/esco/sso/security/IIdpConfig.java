@@ -141,4 +141,5 @@ public interface IIdpConfig extends Serializable {
 
 	boolean isAcceptAuthFromOpaqueID();
 
+	boolean isDoRedirectForSLO();
 }

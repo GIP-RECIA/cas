@@ -212,4 +212,9 @@ public class CasIdpConfig implements IIdpConfig {
 	public boolean isAcceptAuthFromOpaqueID() {
 		return false;
 	}
+
+	@Override
+	public boolean isDoRedirectForSLO() {
+		return false;
+	}
 }

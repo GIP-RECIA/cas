@@ -111,7 +111,7 @@ public final class SamlSingleLogoutController extends AbstractController impleme
 
 						httpRedirectLogoutUrl = outgoingSaml.getHttpRedirectBindingUrl();
 
-						if (this.singleLogoutSilently) {
+						if (this.singleLogoutSilently && !idpConnector.getIdpConfig().isDoRedirectForSLO()) {
 							// Send silent SLO from server
 							this.silentLogout(idpConnector, outgoingSaml);
 						} else {
