@@ -20,7 +20,7 @@
     "lint": "eslint resources/static/**/*.js --quiet --color"
   },
   "dependencies": {
-    "bootstrap": "^4.0.0",
+    "bootstrap": "^5.0.0",
     "eslint-loader": "^2.0.0",
     "gulp": "^4.0.0",
     "gulp-autoprefixer": "^6.0.0",
